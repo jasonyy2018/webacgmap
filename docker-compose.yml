@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./prisma:/app/prisma
+      # Persistence for the SQLite database
+      - ./dev.db:/app/dev.db
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/dev.db
+    restart: always

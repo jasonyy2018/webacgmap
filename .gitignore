@@ -1,0 +1,65 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+app/generated/prisma
+
+# database
+*.db
+*.db-journal
+*.sqlite
+
+# temp
+next-temp/
+
+# python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# backup cleanup
+_old_frontend/*
+!_old_frontend/src/
+!_old_frontend/public/
+!_old_frontend/package.json
+!_old_frontend/vite.config.ts
+!_old_frontend/tsconfig.json
+!_old_frontend/index.html
+!_old_frontend/Dockerfile
+!_old_frontend/README.md

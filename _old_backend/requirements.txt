@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+psycopg2-binary
+google-generativeai
+googlemaps
+httpx
+beautifulsoup4
+pydantic-settings
+python-dotenv

@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id              Int           @id @default(autoincrement())
+  name            String
+  address         String?
+  phone           String?
+  website         String?
+  contact_email   String?       @map("contact_email")
+  rating          Float?
+  place_id        String        @unique @map("place_id")
+  search_query    String?       @map("search_query")
+  search_location String?       @map("search_location")
+  industry        String?
+  status          String        @default("pending") // pending, analyzed, contacted, ignored
+  ai_score        Int?          @map("ai_score")
+  ai_grade        String?       @map("ai_grade")
+  ai_status       String        @default("pending") @map("ai_status") // pending, analyzing, completed, failed
+  ai_tags         String        @default("[]")      @map("ai_tags")
+  contact_attempts Int          @default(0)         @map("contact_attempts")
+  last_contacted  DateTime?     @map("last_contacted")
+  created_at      DateTime      @default(now())     @map("created_at")
+  updated_at      DateTime      @updatedAt          @map("updated_at")
+  analysis        LeadAnalysis?
+}
+
+model LeadAnalysis {
+  id               Int      @id @default(autoincrement())
+  lead_id          Int      @unique @map("lead_id")
+  lead             Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  tech_stack       String   @default("[]")      @map("tech_stack")
+  ux_assessment    String?  @map("ux_assessment")
+  mobile_friendly  Boolean? @map("mobile_friendly")
+  business_insight String?  @map("business_insight")
+  detailed_analysis String? @map("detailed_analysis")
+  ai_confidence    Float?   @map("ai_confidence")
+  generated_email  String?  @map("generated_email")
+  email_subjects   String   @default("[]")      @map("email_subjects")
+  poster_description String? @map("poster_description")
+  poster_url       String?  @map("poster_url")
+}
