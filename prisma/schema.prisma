@@ -19,7 +19,7 @@ model Lead {
   search_query    String?       @map("search_query")
   search_location String?       @map("search_location")
   industry        String?
-  status          String        @default("pending") // pending, analyzed, contacted, ignored
+  status          String        @default("pending") // pending, analyzed, contacted, greeting_sent, followup_sent, replied, meeting_booked, closed_won, ignored
   ai_score        Int?          @map("ai_score")
   ai_grade        String?       @map("ai_grade")
   ai_status       String        @default("pending") @map("ai_status") // pending, analyzing, completed, failed
@@ -29,6 +29,7 @@ model Lead {
   created_at      DateTime      @default(now())     @map("created_at")
   updated_at      DateTime      @updatedAt          @map("updated_at")
   analysis        LeadAnalysis?
+  replies         LeadReply[]
 }
 
 model LeadAnalysis {
@@ -45,4 +46,20 @@ model LeadAnalysis {
   email_subjects   String   @default("[]")      @map("email_subjects")
   poster_description String? @map("poster_description")
   poster_url       String?  @map("poster_url")
+}
+
+model LeadReply {
+  id                 Int      @id @default(autoincrement())
+  lead_id            Int      @map("lead_id")
+  lead               Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  from_email         String   @map("from_email")
+  from_name          String?  @map("from_name")
+  subject            String?
+  content            String
+  sentiment          String   @default("INTERESTED") // INTERESTED, BOOKING_REQUEST, OBJECTION, NOT_INTERESTED
+  ai_summary         String?  @map("ai_summary")
+  ai_suggested_reply String?  @map("ai_suggested_reply")
+  source             String   @default("email") // email, proposal_inquiry, webhook, simulated
+  is_read            Boolean  @default(false) @map("is_read")
+  created_at         DateTime @default(now()) @map("created_at")
 }

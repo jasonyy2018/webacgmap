@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { MapPin, Briefcase, Zap, Shield, Sparkles, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Briefcase, Zap, Shield, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface PresetProps {
   onSelect: (query: string, location: string) => void;
@@ -95,8 +95,9 @@ export const NORTH_AMERICA_LOCATIONS: LocationPreset[] = [
 ];
 
 export default function NorthAmericaPresets({ onSelect, disabled }: PresetProps) {
-  const [selectedIndustry, setSelectedIndustry] = React.useState<IndustryPreset>(NORTH_AMERICA_INDUSTRIES[0]);
-  const [selectedLocation, setSelectedLocation] = React.useState<LocationPreset>(NORTH_AMERICA_LOCATIONS[0]);
+  const [selectedIndustry, setSelectedIndustry] = useState<IndustryPreset>(NORTH_AMERICA_INDUSTRIES[0]);
+  const [selectedLocation, setSelectedLocation] = useState<LocationPreset>(NORTH_AMERICA_LOCATIONS[0]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleLaunch = (ind: IndustryPreset, loc: LocationPreset) => {
     setSelectedIndustry(ind);
@@ -104,40 +105,51 @@ export default function NorthAmericaPresets({ onSelect, disabled }: PresetProps)
     onSelect(ind.query, loc.city);
   };
 
+  const displayedIndustries = isExpanded ? NORTH_AMERICA_INDUSTRIES : NORTH_AMERICA_INDUSTRIES.slice(0, 4);
+
   return (
-    <div className="bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 rounded-3xl p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
+    <div className="bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 rounded-2xl p-4 md:p-5 space-y-4 shadow-lg">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
         <div>
-          <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-widest mb-1">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-0.5">
+            <Sparkles className="w-3 h-3" />
             North America High-Intent Lead Presets
           </div>
-          <h3 className="text-lg font-bold text-white">
-            北美英语高潜行业与刚需建站市场快速发现
+          <h3 className="text-sm md:text-base font-bold text-white">
+            北美英语高潜建站行业与目标城市预设
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
-            精选客单价高、极其依赖线上第一印象与手机端即时转化的本地实体企业
-          </p>
         </div>
 
-        <button
-          onClick={() => handleLaunch(selectedIndustry, selectedLocation)}
-          disabled={disabled}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all transform active:scale-95 disabled:opacity-50"
-        >
-          <Zap className="w-3.5 h-3.5" />
-          <span>一键挖掘高需求客户</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-[11px] text-gray-300 font-medium flex items-center gap-1 transition-all"
+          >
+            <span>{isExpanded ? '收起行业' : `展开全部 (${NORTH_AMERICA_INDUSTRIES.length})`}</span>
+            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
+          <button
+            onClick={() => handleLaunch(selectedIndustry, selectedLocation)}
+            disabled={disabled}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition-all transform active:scale-95 disabled:opacity-50"
+          >
+            <Zap className="w-3 h-3" />
+            <span>一键发掘</span>
+          </button>
+        </div>
       </div>
 
-      {/* Grid: Industries */}
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
-          选择北美建站高意向行业 (Industry Niches)
+      {/* Grid: Industries with Compact Scrollable Heights */}
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Briefcase className="w-3 h-3 text-indigo-400" />
+          行业分类:
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {NORTH_AMERICA_INDUSTRIES.map((ind) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {displayedIndustries.map((ind) => {
             const isSelected = selectedIndustry.query === ind.query;
             return (
               <button
@@ -145,19 +157,19 @@ export default function NorthAmericaPresets({ onSelect, disabled }: PresetProps)
                 type="button"
                 onClick={() => setSelectedIndustry(ind)}
                 disabled={disabled}
-                className={`p-3 rounded-2xl border text-left transition-all ${
+                className={`p-2.5 rounded-xl border text-left transition-all ${
                   isSelected
-                    ? 'bg-indigo-500/15 border-indigo-500/50 text-white shadow-md'
+                    ? 'bg-indigo-500/15 border-indigo-500/50 text-white shadow-sm'
                     : 'bg-white/[0.02] border-white/5 text-gray-300 hover:bg-white/5 hover:border-white/20'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold truncate pr-1">{ind.name}</span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 shrink-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold truncate pr-1">{ind.name}</span>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 shrink-0">
                     {ind.ticketSize}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed">
+                <p className="text-[9px] text-gray-400 line-clamp-1">
                   {ind.urgencyReason}
                 </p>
               </button>
@@ -167,12 +179,12 @@ export default function NorthAmericaPresets({ onSelect, disabled }: PresetProps)
       </div>
 
       {/* Grid: Locations */}
-      <div className="space-y-2">
-        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5 text-purple-400" />
-          选择目标重点都会区 (Metro Locations)
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+          <MapPin className="w-3 h-3 text-purple-400" />
+          都会区:
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {NORTH_AMERICA_LOCATIONS.map((loc) => {
             const isSelected = selectedLocation.city === loc.city;
             return (
@@ -181,9 +193,9 @@ export default function NorthAmericaPresets({ onSelect, disabled }: PresetProps)
                 type="button"
                 onClick={() => setSelectedLocation(loc)}
                 disabled={disabled}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all flex items-center gap-1 ${
                   isSelected
-                    ? 'bg-purple-500/20 border-purple-500/50 text-white shadow-sm'
+                    ? 'bg-purple-500/25 border-purple-500/50 text-white shadow-sm font-bold'
                     : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/5 hover:text-white'
                 }`}
               >

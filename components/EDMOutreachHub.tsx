@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Mail, Send, Sparkles, Wand2, Zap, Check, Copy, ExternalLink, 
   Eye, Code2, Smartphone, Monitor, Shield, AlertTriangle, 
-  ArrowRight, Users, ChevronRight, Clock, Award, Building2, Flame
+  ArrowRight, Users, ChevronRight, Clock, Award, Building2, Flame,
+  Share2, Compass, AlertCircle
 } from 'lucide-react';
 import { Lead, WebNeedType, OutreachSequenceStep } from '@/lib/types';
 import { EMAIL_TEMPLATES, renderEmail } from '@/lib/email-templates';
@@ -15,6 +16,13 @@ interface EDMOutreachHubProps {
   onUpdate: () => void;
   initialSelectedLead?: Lead | null;
 }
+
+// North American Spam Trigger Words List
+const SPAM_TRIGGER_WORDS = [
+  '100% free', 'guaranteed', 'risk free', 'urgent', 
+  'act now', 'buy now', 'no catch', 'click here', 
+  'cash bonus', 'winner', 'million dollars'
+];
 
 export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }: EDMOutreachHubProps) {
   const analyzedLeads = leads.filter(l => l.ai_status === 'completed');
@@ -31,8 +39,8 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
   const [deviceView, setDeviceView] = useState<'desktop' | 'mobile'>('desktop');
   
   // Sender and Content states
-  const [senderName, setSenderName] = useState('Alex Chen');
-  const [senderAgency, setSenderAgency] = useState('ApexWeb Studios (North America)');
+  const [senderName, setSenderName] = useState('Jason Yu');
+  const [senderAgency, setSenderAgency] = useState('Nexora Digital Studio');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [textContent, setTextContent] = useState('');
@@ -43,7 +51,9 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
   const [isRefining, setIsRefining] = useState(false);
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [copiedContent, setCopiedContent] = useState(false);
+  const [copiedProposalUrl, setCopiedProposalUrl] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'no_website' | 'mobile' | 'ready_to_send'>('all');
+  const [showEmailDetector, setShowEmailDetector] = useState(false);
 
   // Synchronize when active lead changes
   useEffect(() => {
@@ -72,7 +82,7 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
     const rendered = renderEmail(selectedTemplateId, activeLead, {
       senderName,
       senderAgency,
-      replyEmail: 'consult@apexweb.dev'
+      replyEmail: 'jyu@wisdomitc.com'
     });
     setRenderedHtml(rendered.html);
   }, [activeLead?.id, selectedTemplateId, senderName, senderAgency]);
@@ -144,6 +154,56 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
     }
   };
 
+  // Launch in Gmail Web Composer
+  const handleOpenGmail = () => {
+    if (!activeLead) return;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipientEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(textContent)}`;
+    window.open(gmailUrl, '_blank');
+  };
+
+  // Launch in Local Mail Client (Outlook / Apple Mail)
+  const handleOpenDefaultMail = () => {
+    if (!activeLead) return;
+    window.location.href = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textContent)}`;
+  };
+
+  // Generate and Copy Proposal Landing Page
+  const getProposalUrl = () => {
+    if (typeof window === 'undefined' || !activeLead) return '';
+    return `${window.location.origin}/proposal/${activeLead.id}`;
+  };
+
+  const handleCopyProposalUrl = () => {
+    const url = getProposalUrl();
+    navigator.clipboard.writeText(url);
+    setCopiedProposalUrl(true);
+    setTimeout(() => setCopiedProposalUrl(false), 2000);
+  };
+
+  // Extract clean domain for email guessing
+  const getCleanDomain = () => {
+    if (!activeLead?.website) return '';
+    try {
+      const u = new URL(activeLead.website.startsWith('http') ? activeLead.website : `https://${activeLead.website}`);
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  };
+
+  const detectedDomain = getCleanDomain();
+  const guessedEmails = detectedDomain ? [
+    `owner@${detectedDomain}`,
+    `contact@${detectedDomain}`,
+    `service@${detectedDomain}`,
+    `info@${detectedDomain}`,
+  ] : [];
+
+  // Check spam trigger words
+  const detectedSpamWords = SPAM_TRIGGER_WORDS.filter(w => 
+    subject.toLowerCase().includes(w) || textContent.toLowerCase().includes(w)
+  );
+
   const filteredLeads = analyzedLeads.filter((lead) => {
     if (filterType === 'no_website') return lead.analysis?.need_category === 'NO_WEBSITE';
     if (filterType === 'mobile') return lead.analysis?.need_category === 'MOBILE_UNFRIENDLY';
@@ -188,7 +248,7 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
             onClick={() => setFilterType('mobile')}
             className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'mobile' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
           >
-            手机端差
+            手机差
           </button>
         </div>
 
@@ -240,7 +300,7 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
       {/* Main EDM Studio Area */}
       {activeLead ? (
         <div className="flex-1 h-full flex flex-col bg-[#0b0f19] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-          {/* Top Compact Banner: Lead Diagnosis & Urgency Insights */}
+          {/* Top Compact Banner: Lead Diagnosis & Proposal Preview Shortcuts */}
           <div className="shrink-0 p-3.5 px-5 bg-gradient-to-r from-indigo-950/50 via-purple-950/30 to-black/70 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <h3 className="text-sm font-bold text-white truncate">{activeLead.name}</h3>
@@ -248,23 +308,38 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
               <span className="text-xs font-bold text-amber-400 shrink-0">
                 ⭐ {activeLead.rating || '4.8'}
               </span>
-              <span className="text-[11px] text-gray-400 truncate hidden md:inline">
-                &bull; {activeLead.analysis?.personalized_hook || activeLead.analysis?.ux_assessment || '建议通过现代移动端响应式改版提升预约转化率'}
+              <span className="text-[11px] text-gray-400 truncate hidden xl:inline">
+                &bull; {activeLead.analysis?.personalized_hook || '建议通过现代移动端响应式改版提升预约转化率'}
               </span>
             </div>
 
-            {/* Quick Metrics */}
-            <div className="flex items-center gap-2 shrink-0 text-xs">
-              <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-cyan-300 font-mono text-[11px]">
-                手机分: {activeLead.analysis?.mobile_score || 45}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 font-mono text-[11px]">
-                月失客流: ~{activeLead.analysis?.estimated_lost_visitors_monthly || 240}人
-              </span>
+            {/* Quick Actions: Live Proposal Page */}
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={getProposalUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                title="Open client's personalized redesign proposal page"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>客户专属提案页</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <button
+                type="button"
+                onClick={handleCopyProposalUrl}
+                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition-all flex items-center gap-1"
+                title="Copy proposal page link to send to client"
+              >
+                {copiedProposalUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                <span>{copiedProposalUrl ? '已复制链接' : '复制提案链接'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Integrated Sequence & Template Bar (Consolidated & Compact) */}
+          {/* Integrated Sequence & Template Bar */}
           <div className="shrink-0 px-4 py-2 bg-black/40 border-b border-white/5 flex flex-wrap items-center justify-between gap-2.5">
             {/* Sequence 4 Steps */}
             <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
@@ -361,18 +436,54 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
             </div>
           </div>
 
-          {/* Compact Email Header (To, From, Subject) */}
+          {/* Email Header: To, From, Subject, and AI Email Detective */}
           <div className="shrink-0 px-4 py-2 bg-black/25 border-b border-white/5 space-y-1.5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg px-2.5 py-1">
-                <span className="text-[10px] uppercase font-bold text-gray-400 shrink-0">收件人 (To):</span>
-                <input
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="name@business.com (可直接输入或补充)"
-                  className="bg-transparent text-white font-mono text-xs outline-none w-full"
-                />
+              <div className="relative">
+                <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg px-2.5 py-1">
+                  <span className="text-[10px] uppercase font-bold text-gray-400 shrink-0">收件人 (To):</span>
+                  <input
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    placeholder="name@business.com"
+                    className="bg-transparent text-white font-mono text-xs outline-none w-full"
+                  />
+                  {guessedEmails.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailDetector(!showEmailDetector)}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold shrink-0 flex items-center gap-0.5"
+                    >
+                      <Compass className="w-3 h-3" />
+                      <span>邮箱推测</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Guessed Email Popup */}
+                {showEmailDetector && guessedEmails.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 z-30 w-full bg-[#0d1322] border border-indigo-500/30 rounded-xl p-2 shadow-2xl space-y-1">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
+                      基于官网域名 @{detectedDomain} 推荐邮箱 (点击直接填入):
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {guessedEmails.map((email) => (
+                        <button
+                          key={email}
+                          type="button"
+                          onClick={() => {
+                            setRecipientEmail(email);
+                            setShowEmailDetector(false);
+                          }}
+                          className="px-2.5 py-1 rounded bg-white/5 hover:bg-indigo-600 text-left font-mono text-[11px] text-white transition-colors"
+                        >
+                          {email}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg px-2.5 py-1">
@@ -402,12 +513,12 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
                 }}
                 className="text-gray-400 hover:text-white p-1 rounded shrink-0"
               >
-                {copiedSubject ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedSubject ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
 
-          {/* Main Body Preview / Editor Area (Fully fluid, no clipping) */}
+          {/* Main Body Preview / Editor Area */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-black/50 flex justify-center custom-scrollbar">
             {previewMode === 'html' ? (
               <div 
@@ -430,45 +541,83 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
                   className="w-full flex-1 min-h-[280px] p-4 bg-white/[0.03] border border-white/10 rounded-xl text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/40 resize-none font-mono text-xs leading-relaxed"
                 />
 
-                {/* AI Refinement Actions */}
-                <div className="shrink-0 flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <Wand2 className="w-3 h-3 text-indigo-400" />
-                    AI 润色:
-                  </span>
-                  <button
-                    onClick={() => handleRefine('Make tone more consultative, professional and executive for North American business owners.')}
-                    disabled={isRefining}
-                    className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-gray-300 transition-all"
-                  >
-                    顾问级正式
-                  </button>
-                  <button
-                    onClick={() => handleRefine('Make it under 110 words, very direct, focusing strictly on mobile conversion flaws.')}
-                    disabled={isRefining}
-                    className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-gray-300 transition-all"
-                  >
-                    &lt;110词极简
-                  </button>
-                  <button
-                    onClick={() => handleRefine('Highlight that competitor websites in their city are capturing mobile leads, and offer a free Figma mockup.')}
-                    disabled={isRefining}
-                    className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-gray-300 transition-all"
-                  >
-                    强调竞争与赠送原型
-                  </button>
+                {/* AI Refinement Actions & Deliverability Status */}
+                <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Wand2 className="w-3 h-3 text-indigo-400" />
+                      AI 润色:
+                    </span>
+                    <button
+                      onClick={() => handleRefine('Make tone more consultative, professional and executive for North American business owners.')}
+                      disabled={isRefining}
+                      className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-gray-300 transition-all"
+                    >
+                      顾问级正式
+                    </button>
+                    <button
+                      onClick={() => handleRefine('Make it under 110 words, very direct, focusing strictly on mobile conversion flaws.')}
+                      disabled={isRefining}
+                      className="px-2.5 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-gray-300 transition-all"
+                    >
+                      &lt;110词极简
+                    </button>
+                    <button
+                      onClick={() => handleRefine(`Mention that their personalized interactive concept is ready at ${getProposalUrl()}`)}
+                      disabled={isRefining}
+                      className="px-2.5 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-[10px] text-indigo-300 transition-all"
+                    >
+                      插入专属提案链接
+                    </button>
+                  </div>
+
+                  {/* Spam words auditor */}
+                  <div className="flex items-center gap-1 text-[10px]">
+                    {detectedSpamWords.length > 0 ? (
+                      <span className="text-amber-400 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        <AlertTriangle className="w-3 h-3" />
+                        含敏感词 ({detectedSpamWords.join(', ')})
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        <Shield className="w-3 h-3" />
+                        投递评分 99% (安全无垃圾词)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Bottom Fixed Action Footer (Sticky & 100% visible, never clipped) */}
-          <div className="shrink-0 p-3 px-5 bg-[#080c14] border-t border-white/10 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <Shield className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[11px]">SPF / DKIM 兼容 &bull; 99% 高投递率优化</span>
+          {/* Bottom Fixed Action Footer (Sticky & Complete Direct Launch Options) */}
+          <div className="shrink-0 p-3 px-5 bg-[#080c14] border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+            {/* Operator Client Quick Triggers */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mr-1 hidden sm:inline">直发唤起:</span>
+              <button
+                type="button"
+                onClick={handleOpenGmail}
+                disabled={!recipientEmail}
+                className="px-3 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
+                title="Launch Gmail Web Composer with pre-filled content (100% Inbox Delivery via your Workspace account)"
+              >
+                <span>Gmail 直发</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenDefaultMail}
+                disabled={!recipientEmail}
+                className="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
+                title="Launch Outlook / Mac Mail default client"
+              >
+                <span>Outlook / 本地客户端</span>
+              </button>
             </div>
 
+            {/* In-App Dispatch */}
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => {
@@ -489,7 +638,7 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 transition-all transform active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{isSending ? '发送中...' : `发送 Stage ${selectedSequenceIndex + 1} 问候邮件`}</span>
+                <span>{isSending ? '发送中...' : `系统发送 Stage ${selectedSequenceIndex + 1}`}</span>
               </button>
             </div>
           </div>

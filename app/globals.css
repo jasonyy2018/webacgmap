@@ -11,26 +11,135 @@
   --font-outfit: var(--font-outfit);
 }
 
-body {
+html, body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-outfit), sans-serif;
+  scroll-behavior: smooth;
 }
 
-/* Custom Scrollbar */
+/* Force High-Contrast Visible Scrollbars Globally Across All Browsers */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #6366f1 #0a0f1d;
+}
+
+/* WebKit (Chrome, Edge, Safari, Electron) */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px !important;
+  height: 10px !important;
+  display: block !important;
 }
 
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: #090d16 !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #222;
-  border-radius: 10px;
+  background: #4f46e5 !important;
+  border-radius: 6px !important;
+  border: 2px solid #090d16 !important;
+  min-height: 40px !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333;
+  background: #818cf8 !important;
 }
+
+::-webkit-scrollbar-corner {
+  background: #090d16 !important;
+}
+
+/* Dedicated Class for Explicit Scrollable Containers */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #6366f1 #0a0f1d;
+  overflow-y: scroll !important;
+}
+
+/* 3D Animations & Cyberpunk Keyframes */
+@keyframes laserScan {
+  0% {
+    top: 0%;
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.2;
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateZ(75px) translateY(-25px) translateX(25px);
+  }
+  50% {
+    transform: translateZ(85px) translateY(-35px) translateX(28px);
+  }
+}
+
+@keyframes floatReverse {
+  0%, 100% {
+    transform: translateZ(90px) translateY(25px) translateX(-25px);
+  }
+  50% {
+    transform: translateZ(100px) translateY(15px) translateX(-28px);
+  }
+}
+
+@keyframes cyberGrid {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 40px;
+  }
+}
+
+.animate-laser-scan {
+  animation: laserScan 4s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 7s ease-in-out infinite;
+}
+
+.cyber-grid-floor {
+  background-image: 
+    linear-gradient(to right, rgba(99, 102, 241, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.12) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: cyberGrid 20s linear infinite;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px !important;
+}
+

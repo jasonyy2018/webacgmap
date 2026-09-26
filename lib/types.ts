@@ -50,6 +50,23 @@ export interface LeadAnalysis {
     email_sequence?: OutreachSequenceStep[];
 }
 
+export type ReplySentiment = 'INTERESTED' | 'BOOKING_REQUEST' | 'OBJECTION' | 'NOT_INTERESTED' | 'FEEDBACK' | 'CONSULTATION';
+
+export interface LeadReply {
+    id: number;
+    lead_id: number;
+    from_email: string;
+    from_name?: string;
+    subject?: string;
+    content: string;
+    sentiment: ReplySentiment;
+    ai_summary?: string;
+    ai_suggested_reply?: string;
+    source: string;
+    is_read: boolean;
+    created_at?: string;
+}
+
 export interface Lead {
     id: number;
     name: string;
@@ -66,7 +83,7 @@ export interface Lead {
     ai_grade?: string;
     ai_status: 'pending' | 'analyzing' | 'completed' | 'failed' | string;
     ai_tags: string[];
-    status: 'pending' | 'analyzed' | 'contacted' | 'ignored' | string;
+    status: 'pending' | 'analyzed' | 'contacted' | 'greeting_sent' | 'followup_sent' | 'replied' | 'meeting_booked' | 'closed_won' | 'ignored' | string;
     pipeline_stage?: PipelineStage;
     contact_attempts?: number;
     last_contacted?: string;
@@ -74,6 +91,7 @@ export interface Lead {
     created_at?: string;
     updated_at?: string;
     analysis?: LeadAnalysis;
+    replies?: LeadReply[];
 }
 
 export interface EmailTemplate {

@@ -16,7 +16,8 @@ import {
   Sliders, 
   ShieldCheck,
   Zap,
-  Globe
+  Globe,
+  Mail
 } from 'lucide-react';
 
 interface SettingsDashboardProps {
@@ -221,25 +222,92 @@ export default function SettingsDashboard({ onClearLeads, onRefreshLeads }: Sett
           </div>
         </div>
 
-        {/* Section 3: Webhook & Third-party Integrations */}
+        {/* Section 2.5: EDM Outbound Dispatch Gateway */}
+        <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Mail className="w-5 h-5 text-indigo-400" /> EDM 邮件发信网关设置 (Outbound Gateway)
+            </h3>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono">
+              出海防进垃圾箱通道
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { id: 'mock', title: '安全模拟演练 (Mock)', desc: '用于内部测试/演示，不向客户真实发信，记录完整日志' },
+                { id: 'gmail', title: 'Gmail / Outlook 直发', desc: '在 EDM Studio 一键调起个人商业邮箱，100% 进收件箱' },
+                { id: 'smtp', title: '企业级 SMTP 服务', desc: '配置 Google Workspace 或自有企业域名发信服务器' },
+              ].map((mode) => (
+                <div
+                  key={mode.id}
+                  className="p-4 rounded-2xl bg-black/40 border border-white/10 hover:border-indigo-500/40 transition-all space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white">{mode.title}</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">{mode.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+              <div className="space-y-1.5">
+                <label className="text-gray-400 uppercase font-bold text-[10px]">默认商业发件人签名 (Sender Name)</label>
+                <input
+                  type="text"
+                  defaultValue="Jason Yu | Nexora Digital Engineering Lead"
+                  className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-white font-mono text-xs outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-gray-400 uppercase font-bold text-[10px]">回复与咨询接收邮箱 (Reply-To Email)</label>
+                <input
+                  type="email"
+                  defaultValue="jyu@wisdomitc.com"
+                  className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-white font-mono text-xs outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Webhook & Inbound Mailbox Integrations */}
         <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Webhook className="w-5 h-5 text-emerald-400" /> Webhook & External Workflow Sync
+            <Webhook className="w-5 h-5 text-emerald-400" /> Inbound Mailbox & External Workflow Sync
           </h3>
 
-          <div className="space-y-2">
-            <label className="block text-gray-400 text-xs font-bold uppercase tracking-wider">
-              Outbound Lead Webhook Endpoint (e.g. Queeny AI Workflow / Zapier)
-            </label>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-black/60 border border-white/10 text-emerald-400 font-mono text-xs outline-none"
-            />
-            <p className="text-[11px] text-gray-500">
-              When a lead reaches Priority A status, JSON payload will be posted to this endpoint automatically.
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-black/40 border border-indigo-500/30 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block">
+                Official Inbound Mailbox Webhook
+              </span>
+              <div className="p-2.5 bg-black/70 rounded-xl font-mono text-xs text-emerald-400 border border-white/10">
+                POST /api/inbound/email
+              </div>
+              <p className="text-[11px] text-gray-400">
+                将发往 <strong className="text-white">jyu@wisdomitc.com</strong> 的邮件转送至此接口，支持 SendGrid / Cloudflare / Postmark Webhook 自动录入。
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 block">
+                Outbound Lead Webhook (CRM/Zapier)
+              </span>
+              <input
+                type="url"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-emerald-400 font-mono text-xs outline-none"
+              />
+              <p className="text-[11px] text-gray-400">
+                当线索被标记为高意向或成交时，将数据自动同步至外部系统。
+              </p>
+            </div>
           </div>
         </div>
 

@@ -8,8 +8,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "MapKDev AI | Smart Lead Generation",
-  description: "Use AI to discover businesses with outdated websites, poor SEO, or technical debt directly from Google Maps.",
+  title: "Nexora Studio | High-Performance SMB Web Systems & Growth Architecture",
+  description: "Sub-second Next.js web platforms engineered for North American small and medium businesses. 14-day guaranteed turnaround, 100% code ownership, and measurable conversion lift.",
 };
 
 export default function RootLayout({

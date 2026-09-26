@@ -84,7 +84,7 @@ ${senderRole} | ${senderAgency}
     </p>
 
     <div style="text-align: center; margin: 32px 0;">
-      <a href="mailto:${options.replyEmail || 'hello@apexwebstudio.com'}?subject=Re:%20${encodeURIComponent(company)}%20Mockup%20Preview" style="display: inline-block; background: #4f46e5; color: #ffffff; text-decoration: none; padding: 13px 28px; font-size: 14px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+      <a href="mailto:${options.replyEmail || 'jyu@wisdomitc.com'}?subject=Re:%20${encodeURIComponent(company)}%20Mockup%20Preview" style="display: inline-block; background: #4f46e5; color: #ffffff; text-decoration: none; padding: 13px 28px; font-size: 14px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
         Request Custom Mockup Preview &rarr;
       </a>
     </div>
@@ -204,7 +204,7 @@ Lead Tech Auditor | WebPulse Digital
 
     <!-- CTA Button -->
     <div style="text-align: center; margin-bottom: 24px;">
-      <a href="mailto:${options.replyEmail || 'audit@webpulse.io'}?subject=Unlock%20Full%20Audit%20for%20${encodeURIComponent(company)}" style="display: inline-block; background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: 700; border-radius: 10px; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35);">
+      <a href="mailto:${options.replyEmail || 'jyu@wisdomitc.com'}?subject=Unlock%20Full%20Audit%20for%20${encodeURIComponent(company)}" style="display: inline-block; background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 14px; font-weight: 700; border-radius: 10px; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35);">
         Unlock Full Interactive Report (Free)
       </a>
     </div>
@@ -305,7 +305,7 @@ Creative Director | NextEra Web Design
       <div style="text-align: center; background: #faf5ff; border: 1px dashed #c084fc; border-radius: 12px; padding: 24px; margin: 28px 0;">
         <div style="font-size: 14px; font-weight: 700; color: #6b21a8; margin-bottom: 6px;">Want to review the live mockup?</div>
         <p style="font-size: 13px; color: #7e22ce; margin: 0 0 16px 0;">It’s completely free to review, with zero obligation to hire us.</p>
-        <a href="mailto:${options.replyEmail || 'design@nextera.dev'}?subject=Yes%2C%20send%20the%20${encodeURIComponent(company)}%20concept" style="display: inline-block; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 12px 28px; font-size: 14px; font-weight: 600; border-radius: 8px;">
+        <a href="mailto:${options.replyEmail || 'jyu@wisdomitc.com'}?subject=Yes%2C%20send%20the%20${encodeURIComponent(company)}%20concept" style="display: inline-block; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 12px 28px; font-size: 14px; font-weight: 600; border-radius: 8px;">
           View Private Interactive Staging Link
         </a>
       </div>
@@ -406,7 +406,7 @@ Founder, Prestige Digital
     </div>
 
     <div style="text-align: center; margin: 32px 0;">
-      <a href="mailto:${options.replyEmail || 'marcus@prestigeweb.com'}?subject=Interested%20in%20a%20modern%20web%20look%20for%20${encodeURIComponent(company)}" style="display: inline-block; background: #0c0a09; color: #fafaf9; text-decoration: none; padding: 13px 30px; font-size: 14px; font-weight: 600; border-radius: 8px;">
+      <a href="mailto:${options.replyEmail || 'jyu@wisdomitc.com'}?subject=Interested%20in%20a%20modern%20web%20look%20for%20${encodeURIComponent(company)}" style="display: inline-block; background: #0c0a09; color: #fafaf9; text-decoration: none; padding: 13px 30px; font-size: 14px; font-weight: 600; border-radius: 8px;">
         Schedule a 10-Min Casual Strategy Chat &rarr;
       </a>
     </div>

@@ -396,5 +396,85 @@ export const aiService = {
         style_vibe: "Modern Tech"
       };
     }
+  },
+
+  async analyzeCustomerReply(replyText: string, leadName: string) {
+    const model = getGenerativeModel();
+    if (!model) {
+      const lower = replyText.toLowerCase();
+      let sentiment: 'INTERESTED' | 'BOOKING_REQUEST' | 'OBJECTION' | 'NOT_INTERESTED' | 'FEEDBACK' | 'CONSULTATION' = 'INTERESTED';
+      if (lower.includes('feedback') || lower.includes('suggestion') || lower.includes('bug') || lower.includes('improve') || lower.includes('体验') || lower.includes('反馈') || lower.includes('建议')) {
+        sentiment = 'FEEDBACK';
+      } else if (lower.includes('quote') || lower.includes('price') || lower.includes('cost') || lower.includes('budget') || lower.includes('consult') || lower.includes('inquiry') || lower.includes('咨询') || lower.includes('报价') || lower.includes('合作')) {
+        sentiment = 'CONSULTATION';
+      } else if (lower.includes('call') || lower.includes('zoom') || lower.includes('schedule') || lower.includes('time') || lower.includes('meet') || lower.includes('phone') || lower.includes('预约')) {
+        sentiment = 'BOOKING_REQUEST';
+      } else if (lower.includes('not interested') || lower.includes('unsubscribe') || lower.includes('remove') || lower.includes('stop') || lower.includes('no thanks')) {
+        sentiment = 'NOT_INTERESTED';
+      } else if (lower.includes('already have') || lower.includes('busy') || lower.includes('later')) {
+        sentiment = 'OBJECTION';
+      }
+
+      const summaryText = sentiment === 'FEEDBACK'
+        ? `${leadName} 提交了宝贵的网站体验/功能优化反馈与建议。`
+        : sentiment === 'CONSULTATION'
+        ? `${leadName} 发起了业务建站/改版咨询与报价探讨。`
+        : sentiment === 'BOOKING_REQUEST'
+        ? `${leadName} 希望预约策略通话或线上演示。`
+        : sentiment === 'INTERESTED'
+        ? `${leadName} 对网站改版与数字化升级方案表达了高度意向。`
+        : `${leadName} 提出了一些顾虑或当前无直接意向。`;
+
+      const replyDraft = sentiment === 'FEEDBACK'
+        ? `Hi ${leadName} Team,\n\nThank you so much for taking the time to share your feedback with Nexora Studio! We truly value your insights and will review them thoroughly.\n\nBest regards,\nJason Yu | jyu@wisdomitc.com\nNexora Digital Team`
+        : sentiment === 'CONSULTATION'
+        ? `Hi ${leadName} Team,\n\nThank you for reaching out to Nexora Studio regarding your web presence! We reviewed your initial requirements and would love to share a tailored scope estimate and preview.\n\nCould we connect for a brief 10-minute discovery call this week?\n\nBest regards,\nJason Yu | jyu@wisdomitc.com\nNexora Digital Engineering Team`
+        : `Hi ${leadName} Team,\n\nThank you for getting back to me! I'd be delighted to share the interactive staging mockup or connect for a brief 10-minute discovery call.\n\nBest regards,\nJason Yu | jyu@wisdomitc.com\nNexora Digital Engineering Team`;
+
+      return {
+        sentiment,
+        ai_summary: summaryText,
+        ai_suggested_reply: replyDraft
+      };
+    }
+
+    const prompt = `
+    You are an expert B2B sales development & client success AI for Nexora Studio (Contact: jyu@wisdomitc.com).
+    A client named '${leadName}' has sent the following message/inbound email:
+
+    Client Message:
+    "${replyText}"
+
+    Tasks:
+    1. Classify the sentiment into one of these strict values:
+       - "FEEDBACK" (user is providing suggestions, comments on usability, feature requests, or general thoughts)
+       - "CONSULTATION" (business inquiry, asking for custom quote, timeline, website development details)
+       - "INTERESTED" (enthusiastic, asking for demo preview, wants to see designs)
+       - "BOOKING_REQUEST" (asked for a phone call, Zoom meeting, or specific time)
+       - "OBJECTION" (said they already have a webmaster, too busy right now, concerned about cost)
+       - "NOT_INTERESTED" (explicitly declined, asked to be removed)
+    2. Write a 1-sentence executive summary of the lead's exact intent or feedback in Chinese/English.
+    3. Draft a tailored, consultative, professional response for our agency lead (Jason Yu, jyu@wisdomitc.com) to reply with.
+
+    Return ONLY a valid JSON object matching this schema:
+    {
+      "sentiment": "FEEDBACK" | "CONSULTATION" | "INTERESTED" | "BOOKING_REQUEST" | "OBJECTION" | "NOT_INTERESTED",
+      "ai_summary": "one sentence summarizing what the client wants or commented",
+      "ai_suggested_reply": "complete drafted email reply signed by Jason Yu (jyu@wisdomitc.com)"
+    }
+    `;
+
+    try {
+      const result = await model.generateContent(prompt);
+      return cleanAndParseJSON(result.response.text());
+    } catch (e) {
+      console.error("AI reply analysis failed:", e);
+      return {
+        sentiment: 'CONSULTATION',
+        ai_summary: `${leadName} 提交了咨询或反馈信息。`,
+        ai_suggested_reply: `Hi ${leadName} Team,\n\nThank you for reaching out! We received your message and would love to assist you. What time this week would work best for a 10-minute walkthrough?\n\nBest regards,\nJason Yu | jyu@wisdomitc.com\nNexora Digital Team`
+      };
+    }
   }
 };
+
