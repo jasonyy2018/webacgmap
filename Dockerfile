@@ -3,8 +3,14 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Configure high-speed mirror and network retry parameters to eliminate ECONNRESET
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
+COPY package.json package-lock.json* .npmrc* ./
+RUN npm ci || npm install
 
 # Stage 2: Builder
 FROM node:22-alpine AS builder
