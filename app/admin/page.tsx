@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Layout, Search, Users, Settings, Mail, BarChart3, 
-  Code, Globe, Copy, Check, Terminal, Play, Layers, Sparkles, Inbox, ExternalLink, ArrowLeft 
+  Code, Globe, Copy, Check, Terminal, Play, Layers, Sparkles, Inbox, ExternalLink, ArrowLeft, Zap 
 } from 'lucide-react';
 import LeadSearch from '@/components/LeadSearch';
 import LeadDashboard from '@/components/LeadDashboard';
@@ -15,10 +15,12 @@ import InboundInbox from '@/components/InboundInbox';
 import EmailEditorModal from '@/components/EmailEditorModal';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import SettingsDashboard from '@/components/SettingsDashboard';
+import WorkflowEngine from '@/components/WorkflowEngine';
+import EnvModeToggle from '@/components/EnvModeToggle';
 import type { Lead } from '@/lib/types';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('search');
+  const [activeTab, setActiveTab] = useState('workflow');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -107,6 +109,7 @@ export default function AdminPage() {
   };
 
   const navItems = [
+    { id: 'workflow', icon: Zap, label: 'One-Click Workflow ⚡' },
     { id: 'search', icon: Search, label: 'Search & Presets' },
     { id: 'leads', icon: Users, label: 'Leads & Audits' },
     { id: 'pipeline', icon: Layers, label: 'Trust Pipeline' },
@@ -228,7 +231,8 @@ fetch(endpoint)
               Admin Ops
             </span>
             <h1 className="text-xl font-bold capitalize tracking-tight flex items-center gap-2">
-              {activeTab === 'api' ? 'API 开发者中心 & 接口部署' : 
+              {activeTab === 'workflow' ? '一键商机全自动作业流 (One-Click Pipeline Orchestrator)' :
+               activeTab === 'api' ? 'API 开发者中心 & 接口部署' : 
                activeTab === 'pipeline' ? 'North America Cold-to-Trust Pipeline' :
                activeTab === 'inbox' ? 'Inbound Reply Inbox & AI Intelligence' :
                activeTab === 'marketing' ? 'EDM Outreach Studio & Template Matrix' :
@@ -238,6 +242,9 @@ fetch(endpoint)
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Real vs Sandbox Environment Switcher */}
+            <EnvModeToggle variant="header" />
+
             <Link
               href="/"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 text-xs font-medium transition-all"
@@ -245,7 +252,7 @@ fetch(endpoint)
               <Globe className="w-3.5 h-3.5 text-emerald-400" />
               <span>查看前台官网</span>
             </Link>
-            <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>在线服务中</span>
             </div>
@@ -254,6 +261,16 @@ fetch(endpoint)
 
         {/* Content Area with Permanent Visible Vertical Scrollbar */}
         <div className="flex-1 min-h-0 p-4 md:p-6 overflow-y-scroll custom-scrollbar">
+          {activeTab === 'workflow' && (
+            <div className="max-w-7xl mx-auto py-2">
+              <WorkflowEngine
+                leads={leads}
+                onUpdateLeads={fetchLeads}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+              />
+            </div>
+          )}
+
           {activeTab === 'search' && (
             <div className="space-y-8 max-w-6xl mx-auto py-4">
               <div className="text-center space-y-3">

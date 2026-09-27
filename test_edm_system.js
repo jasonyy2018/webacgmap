@@ -41,7 +41,7 @@ async function main() {
       description: 'Congratulates 4.9-star rating, highlights mobile tap-to-call friction, offers complimentary Figma mockup.',
       recommendedDelayDays: 0,
       defaultSubject: "Quick idea regarding Apex Plumbing's mobile conversion",
-      content: "Hi Apex Plumbing Team,\n\nI was looking through reputable local emergency contractors in Dallas and wanted to congratulate you on your impressive 4.9★ customer rating!\n\nWhile checking your online portal, I noticed smartphone visitors currently experience delay when attempting to tap-to-call during emergency water leaks.\n\nOur team created a complimentary 1-page modern interactive concept prototype specifically for Apex Plumbing.\n\nWould you be open to me sharing a private staging link with you? Zero strings attached.\n\nBest regards,\nAlex Chen\nApexWeb Studios"
+      content: "Hi Apex Plumbing Team,\n\nI was looking through reputable local emergency contractors in Dallas and wanted to congratulate you on your impressive 4.9★ customer rating!\n\nWhile checking your online portal, I noticed smartphone visitors currently experience delay when attempting to tap-to-call during emergency water leaks.\n\nOur team created a complimentary 1-page modern interactive concept prototype specifically for Apex Plumbing.\n\nWould you be open to me sharing a private staging link with you? Zero strings attached.\n\nBest regards,\nJason Yu\nApexWeb Studios"
     },
     {
       stage: 'stage_2_case_study',
@@ -49,7 +49,7 @@ async function main() {
       description: 'Case study of another Dallas contractor whose inquiries jumped 140%.',
       recommendedDelayDays: 3,
       defaultSubject: "Case study: How modernizing the mobile flow doubled service calls in Dallas",
-      content: "Hi Team,\n\nFollowing up on my previous note. We recently helped another service business in Dallas revamp their mobile booking architecture, resulting in +140% more emergency calls.\n\nWould you like me to send the preview link over?\n\nWarmly,\nAlex Chen"
+      content: "Hi Team,\n\nFollowing up on my previous note. We recently helped another service business in Dallas revamp their mobile booking architecture, resulting in +140% more emergency calls.\n\nWould you like me to send the preview link over?\n\nWarmly,\nJason Yu"
     }
   ];
 

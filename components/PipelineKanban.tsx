@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { 
   Users, Mail, CheckCircle2, MessageSquare, Calendar, Trophy, 
-  ArrowRight, Sparkles, ExternalLink, Globe, AlertCircle, Phone, MapPin 
+  ArrowRight, Sparkles, ExternalLink, Globe, AlertCircle, Phone, MapPin,
+  Clock, FileText, Send 
 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { leadsApi } from '@/lib/api-client';
@@ -214,6 +215,21 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
                             <span>待填邮箱</span>
                           </div>
                         )}
+
+                        {/* Contact attempts & Last Contacted time */}
+                        {(((lead.contact_attempts ?? 0) > 0) || Boolean(lead.last_contacted)) && (
+                          <div className="flex items-center justify-between text-[9px] text-gray-400 font-mono pt-0.5">
+                            <span className="text-cyan-300 font-bold">
+                              已触达 {lead.contact_attempts || 1} 次
+                            </span>
+                            {lead.last_contacted && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5 text-gray-500" />
+                                <span>{new Date(lead.last_contacted).toLocaleDateString()}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Score and Rating */}
@@ -241,6 +257,33 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
                           <option value="closed_won">签约成交 (Won)</option>
                           <option value="ignored">归档关闭 (Ignore)</option>
                         </select>
+                      </div>
+
+                      {/* Quick Action Bar */}
+                      <div className="flex items-center justify-between gap-1.5 pt-1">
+                        <a
+                          href={`/proposal/${lead.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 py-1 px-2 rounded-md bg-white/5 hover:bg-white/10 text-[10px] text-indigo-300 hover:text-white flex items-center justify-center gap-1 transition-all"
+                          title="新窗口预览客户专属 3D 提案"
+                        >
+                          <FileText className="w-2.5 h-2.5" />
+                          <span>提案</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectLead(lead);
+                          }}
+                          className="flex-1 py-1 px-2 rounded-md bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                          title="在 EDM Studio 中打开并推进下一轮跟进信"
+                        >
+                          <Send className="w-2.5 h-2.5" />
+                          <span>跟进发信</span>
+                        </button>
                       </div>
                     </div>
                   ))

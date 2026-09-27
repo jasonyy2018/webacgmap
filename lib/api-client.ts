@@ -21,7 +21,7 @@ export const leadsApi = {
     return response.json();
   },
 
-  sendCustomEmail: async (id: number, payload: { toEmail?: string; subject: string; content: string; stage?: string }): Promise<{ status: string; message: string }> => {
+  sendCustomEmail: async (id: number, payload: { toEmail?: string; subject: string; content?: string; html?: string; stage?: string }): Promise<{ status: string; message: string }> => {
     const response = await fetch(`/api/leads/${id}/send-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,6 +91,9 @@ export const searchApi = {
       method: 'POST',
     });
     if (!response.ok) throw new Error('Search failed');
-    return response.json();
+    const data = await response.json();
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.leads)) return data.leads;
+    return [];
   },
 };

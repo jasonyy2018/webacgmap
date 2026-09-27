@@ -1,4 +1,5 @@
 import { Lead, EmailTemplate, WebNeedType } from './types';
+import { generateExecutivePosterHtml, generateExecutivePosterPlainText } from './email-poster';
 
 // Helper to sanitize text
 function escapeHtml(text: string): string {
@@ -12,6 +13,16 @@ function escapeHtml(text: string): string {
 
 export const EMAIL_TEMPLATES: EmailTemplate[] = [
   {
+    id: 'executive_poster',
+    name: 'Executive Visual Pitch Poster (精美海报级提案信)',
+    category: 'executive',
+    badge: 'Premier Visual Card (Recommended)',
+    subjectFormat: '2026 Digital Architecture Blueprint for {{company_name}} [Confidential Audit]',
+    description: 'Executive dark-mode visual pitch poster card featuring live diagnostic HUD scorecard, mobile friction benchmarks, 3 core transformation pillars, and direct 3D interactive proposal access.',
+    plainText: (lead: Lead, options = {}) => generateExecutivePosterPlainText(lead, options),
+    previewHtml: (lead: Lead, options = {}) => generateExecutivePosterHtml(lead, options),
+  },
+  {
     id: 'executive_consult',
     name: 'Executive Consultation Letter',
     category: 'executive',
@@ -19,9 +30,9 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     subjectFormat: 'Quick inquiry regarding {{company_name}}\'s digital presence',
     description: 'Clean, respectful, and direct consultative letter crafted specifically for North American business owners. Focuses on local credibility and friction-free value.',
     plainText: (lead: Lead, options = {}) => {
-      const senderName = options.senderName || 'Alex Chen';
-      const senderRole = options.senderRole || 'Senior Digital Strategist';
-      const senderAgency = options.senderAgency || 'ApexWeb Studio';
+      const senderName = options.senderName || 'Jason Yu';
+      const senderRole = options.senderRole || 'Senior Web Strategist';
+      const senderAgency = options.senderAgency || 'Nexora Digital Studio';
       const ratingText = lead.rating ? `congratulations on maintaining an impressive ${lead.rating}-star presence in ${lead.search_location || 'your area'}` : `hope business is thriving at ${lead.name}`;
       
       const issueHook = !lead.website 
@@ -45,9 +56,9 @@ ${senderRole} | ${senderAgency}
 `;
     },
     previewHtml: (lead: Lead, options = {}) => {
-      const senderName = escapeHtml(options.senderName || 'Alex Chen');
-      const senderRole = escapeHtml(options.senderRole || 'Senior Digital Strategist');
-      const senderAgency = escapeHtml(options.senderAgency || 'ApexWeb Studio');
+      const senderName = escapeHtml(options.senderName || 'Jason Yu');
+      const senderRole = escapeHtml(options.senderRole || 'Senior Web Strategist');
+      const senderAgency = escapeHtml(options.senderAgency || 'Nexora Digital Studio');
       const company = escapeHtml(lead.name);
       const rating = lead.rating ? escapeHtml(String(lead.rating)) : '5.0';
       const location = escapeHtml(lead.search_location || 'your city');
@@ -111,7 +122,7 @@ ${senderRole} | ${senderAgency}
     subjectFormat: 'Website Audit Scorecard for {{company_name}} [Summary Report]',
     description: 'Features a sleek diagnostic scorecard highlighting performance metrics, mobile compatibility score, and estimated missed revenue opportunities.',
     plainText: (lead: Lead, options = {}) => {
-      const senderName = options.senderName || 'Jordan Vance';
+      const senderName = options.senderName || 'Jason Yu';
       const company = lead.name;
       const score = lead.ai_score || 78;
       const mobileStatus = lead.analysis?.mobile_friendly ? 'Pass (Basic)' : 'Needs Urgent Optimization';
@@ -132,11 +143,11 @@ Would it be helpful if I shared our complete 3-page interactive audit report wit
 
 Warmly,
 ${senderName}
-Lead Tech Auditor | WebPulse Digital
+Senior Web Strategist | Nexora Digital
 `;
     },
     previewHtml: (lead: Lead, options = {}) => {
-      const senderName = escapeHtml(options.senderName || 'Jordan Vance');
+      const senderName = escapeHtml(options.senderName || 'Jason Yu');
       const company = escapeHtml(lead.name);
       const score = lead.ai_score || 82;
       const mobileStatus = lead.analysis?.mobile_friendly ? 'Satisfactory' : 'Action Required';
@@ -210,7 +221,7 @@ Lead Tech Auditor | WebPulse Digital
     </div>
 
     <div style="text-align: center; font-size: 12px; color: #64748b;">
-      Report compiled by ${senderName} &bull; WebPulse Digital Intelligence &bull; Delivered with respect for your time.
+      Report compiled by ${senderName} &bull; Nexora Digital Web Intelligence &bull; Delivered with respect for your time.
     </div>
   </div>
 </body>
@@ -226,7 +237,7 @@ Lead Tech Auditor | WebPulse Digital
     subjectFormat: 'A quick visual concept we designed for {{company_name}}',
     description: 'Focuses on visual transformation, comparing outdated website friction with a modern 2026 digital experience that doubles conversion rates.',
     plainText: (lead: Lead, options = {}) => {
-      const senderName = options.senderName || 'Elena Rostova';
+      const senderName = options.senderName || 'Jason Yu';
       const company = lead.name;
 
       return `Hello ${company} Team,
@@ -244,11 +255,11 @@ Would you be open to seeing the 90-second concept preview? Just reply "yes" and 
 
 Respectfully,
 ${senderName}
-Creative Director | NextEra Web Design
+Senior Web Strategist | Nexora Digital
 `;
     },
     previewHtml: (lead: Lead, options = {}) => {
-      const senderName = escapeHtml(options.senderName || 'Elena Rostova');
+      const senderName = escapeHtml(options.senderName || 'Jason Yu');
       const company = escapeHtml(lead.name);
       const location = escapeHtml(lead.search_location || 'your area');
 
@@ -315,8 +326,8 @@ Creative Director | NextEra Web Design
       </p>
 
       <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #475569;">
-        <strong>${senderName}</strong> &bull; Creative Lead<br>
-        NextEra Web Design & Engineering
+        <strong>${senderName}</strong> &bull; Senior Web Strategist<br>
+        Nexora Digital Engineering Team
       </div>
     </div>
   </div>
@@ -333,7 +344,7 @@ Creative Director | NextEra Web Design
     subjectFormat: 'A 5-star digital storefront to match {{company_name}}\'s reputation',
     description: 'Leverages the business\'s stellar Google Maps reviews. Bridges the gap between their top-tier offline service and their online presentation.',
     plainText: (lead: Lead, options = {}) => {
-      const senderName = options.senderName || 'Marcus Bell';
+      const senderName = options.senderName || 'Jason Yu';
       const company = lead.name;
       const rating = lead.rating || 4.9;
 
@@ -351,11 +362,11 @@ Are you open to a brief chat or seeing a customized preview this week?
 
 Cheers,
 ${senderName}
-Founder, Prestige Digital
+Senior Web Strategist | Nexora Digital
 `;
     },
     previewHtml: (lead: Lead, options = {}) => {
-      const senderName = escapeHtml(options.senderName || 'Marcus Bell');
+      const senderName = escapeHtml(options.senderName || 'Jason Yu');
       const company = escapeHtml(lead.name);
       const rating = lead.rating ? escapeHtml(String(lead.rating)) : '4.9';
       const location = escapeHtml(lead.search_location || 'your region');
@@ -417,7 +428,7 @@ Founder, Prestige Digital
 
     <div style="margin-top: 36px; padding-top: 20px; border-top: 1px solid #e7e5e4; font-size: 14px; color: #44403c;">
       <strong>${senderName}</strong><br>
-      <span style="color: #78716c; font-size: 13px;">Founder &bull; Prestige Digital Solutions</span>
+      <span style="color: #78716c; font-size: 13px;">Senior Web Strategist &bull; Nexora Digital</span>
     </div>
   </div>
 </body>
@@ -432,6 +443,18 @@ export function getTemplateById(id: string): EmailTemplate {
 }
 
 export function renderEmail(templateId: string, lead: Lead, options?: Record<string, any>) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
+  const defaultOptions = {
+    senderName: process.env.SMTP_SENDER_NAME?.split('|')[0]?.trim() || 'Jason Yu',
+    senderRole: 'Senior Web Strategist & Tech Lead',
+    senderAgency: 'Nexora Digital Studio',
+    senderEmail: process.env.SMTP_USER || 'jyu@wisdomitc.com',
+    senderPhone: '+1 (380) 218-4573',
+    replyEmail: process.env.SMTP_USER || 'jyu@wisdomitc.com',
+    originDomain: origin,
+    proposalUrl: `${origin}/proposal/${lead.id}`,
+  };
+  const mergedOptions = { ...defaultOptions, ...options };
   const template = getTemplateById(templateId);
   const subject = template.subjectFormat
     .replace('{{company_name}}', lead.name)
@@ -439,7 +462,7 @@ export function renderEmail(templateId: string, lead: Lead, options?: Record<str
 
   return {
     subject,
-    plainText: template.plainText(lead, options),
-    html: template.previewHtml(lead, options)
+    plainText: template.plainText(lead, mergedOptions),
+    html: template.previewHtml(lead, mergedOptions)
   };
 }

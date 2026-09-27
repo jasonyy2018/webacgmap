@@ -55,6 +55,32 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
   const [filterType, setFilterType] = useState<'all' | 'no_website' | 'mobile' | 'ready_to_send'>('all');
   const [showEmailDetector, setShowEmailDetector] = useState(false);
 
+  // System Environment Mode (Real vs Sandbox)
+  const [systemMode, setSystemMode] = useState<'sandbox' | 'real'>('sandbox');
+  const [isSmtpConfigured, setIsSmtpConfigured] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/system/mode')
+      .then((r) => r.json())
+      .then((data) => {
+        setSystemMode(data.mode);
+        setIsSmtpConfigured(Boolean(data.isSmtpConfigured));
+      })
+      .catch(() => {});
+
+    const handleEnvChanged = (e: any) => {
+      if (e.detail?.mode) {
+        setSystemMode(e.detail.mode);
+        if (typeof e.detail.isSmtpConfigured === 'boolean') {
+          setIsSmtpConfigured(e.detail.isSmtpConfigured);
+        }
+      }
+    };
+
+    window.addEventListener('system-env-mode-changed', handleEnvChanged);
+    return () => window.removeEventListener('system-env-mode-changed', handleEnvChanged);
+  }, []);
+
   // Synchronize when active lead changes
   useEffect(() => {
     if (!activeLead) return;
@@ -130,21 +156,30 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
     }
 
     const currentStepStage = activeLead.analysis?.email_sequence?.[selectedSequenceIndex]?.stage || 'stage_1_greeting';
+    const isLive = systemMode === 'real' && isSmtpConfigured;
+    const confirmPrompt = isLive
+      ? `【⚠️ 真实商业外发确认】\n\n系统当前处于「真实生产环境」。\n将通过腾讯企业邮 (jyu@wisdomitc.com) 真正向企业客户 ${recipientEmail} 发送 Stage ${selectedSequenceIndex + 1} 邮件！\n\n确认立即发送吗？`
+      : `【🛡️ 安全沙盒仿真确认】\n\n系统当前处于「安全沙盒环境」。\n将进行安全模拟发信，记录完整业务状态与仿真日志，不会打扰真实企业。\n\n确认执行沙盒仿真吗？`;
 
-    if (!confirm(`Confirm dispatching Stage ${selectedSequenceIndex + 1} greeting email to ${recipientEmail}?`)) {
+    if (!confirm(confirmPrompt)) {
       return;
     }
 
     setIsSending(true);
     try {
-      await leadsApi.sendCustomEmail(activeLead.id, {
+      const res = await leadsApi.sendCustomEmail(activeLead.id, {
         toEmail: recipientEmail,
         subject,
-        content: previewMode === 'html' ? renderedHtml : textContent,
+        content: textContent,
+        html: renderedHtml,
         stage: currentStepStage,
       });
 
-      alert(`✅ EDM successfully dispatched to ${activeLead.name}! Pipeline stage has been updated.`);
+      const successNotice = isLive
+        ? `🚀 [真实邮件已外发] 邮件已通过腾讯企业邮成功投递至 ${recipientEmail}！`
+        : `🛡️ [沙盒安全仿真完成] 业务流已推进至下一阶段 (当前处于沙盒环境，未外发真实邮件)。`;
+
+      alert(successNotice);
       onUpdate();
     } catch (err: any) {
       console.error('Failed to dispatch:', err);
@@ -339,6 +374,42 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
             </div>
           </div>
 
+          {/* Customer Follow-up & Touchpoint Tracking Status Bar */}
+          {(((activeLead.contact_attempts ?? 0) > 0) || Boolean(activeLead.last_contacted) || activeLead.status === 'greeting_sent' || activeLead.status === 'followup_sent') && (
+            <div className="shrink-0 px-4 py-2 bg-gradient-to-r from-indigo-950/40 via-black/40 to-blue-950/30 border-b border-indigo-500/20 flex flex-wrap items-center justify-between text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-gray-300 font-medium">客户建联与维护状态:</span>
+                <span className="font-bold text-indigo-300 font-mono">
+                  {activeLead.status === 'greeting_sent' ? '已完成 Stage 1 破冰信' :
+                   activeLead.status === 'followup_sent' ? '已完成 Stage 2 案例跟进' :
+                   activeLead.status === 'replied' ? '🔥 客户已回复 (高意向)' :
+                   activeLead.status === 'meeting_booked' ? '📅 已预约 10 分钟演示' :
+                   `已完成邮件触达 (${activeLead.status})`}
+                </span>
+                <span className="text-gray-600">|</span>
+                <span className="text-gray-400 font-mono">
+                  累计触达: <strong className="text-white">{activeLead.contact_attempts || 1}</strong> 次
+                </span>
+                {activeLead.last_contacted && (
+                  <span className="text-gray-400 font-mono">
+                    • 上次发信: <strong className="text-slate-300">{new Date(activeLead.last_contacted).toLocaleDateString()} {new Date(activeLead.last_contacted).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-cyan-300 font-medium flex items-center gap-1">
+                <span>💡 维护推进建议:</span>
+                <span className="text-slate-300">
+                  {activeLead.status === 'greeting_sent'
+                    ? '建议在 3 天后发送 Stage 2 同城同行案例佐证信'
+                    : activeLead.status === 'followup_sent'
+                    ? '建议在 3 天后发送 Stage 3 极简咨询电话邀约'
+                    : '保持周期性关怀，及时跟进客户意向反馈'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Integrated Sequence & Template Bar */}
           <div className="shrink-0 px-4 py-2 bg-black/40 border-b border-white/5 flex flex-wrap items-center justify-between gap-2.5">
             {/* Sequence 4 Steps */}
@@ -348,10 +419,10 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
                 触达序列:
               </span>
               {[
-                { title: 'Stage 1 问候与原型', delay: 'Day 0' },
-                { title: 'Stage 2 案例佐证', delay: '+3天' },
-                { title: 'Stage 3 低阻力邀约', delay: '+6天' },
-                { title: 'Stage 4 优雅告别信', delay: '+10天' },
+                { title: 'Stage 1 问候与原型', delay: 'Day 0', done: (activeLead.status === 'greeting_sent' || activeLead.status === 'followup_sent' || (activeLead.contact_attempts || 0) > 0) },
+                { title: 'Stage 2 案例佐证', delay: '+3天', done: (activeLead.status === 'followup_sent' || (activeLead.contact_attempts || 0) > 1), recommended: activeLead.status === 'greeting_sent' },
+                { title: 'Stage 3 低阻力邀约', delay: '+6天', done: (activeLead.contact_attempts || 0) > 2, recommended: activeLead.status === 'followup_sent' },
+                { title: 'Stage 4 优雅告别信', delay: '+10天', done: false },
               ].map((step, idx) => {
                 const isSelected = selectedSequenceIndex === idx;
                 return (
@@ -361,15 +432,24 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
                     className={`px-2.5 py-1 rounded-lg border text-xs transition-all shrink-0 flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300 font-bold shadow-sm'
+                        : step.recommended
+                        ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 font-semibold'
                         : 'bg-white/[0.02] border-white/5 text-gray-400 hover:text-white'
                     }`}
                   >
                     <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                      isSelected ? 'bg-indigo-500 text-white' : 'bg-white/10 text-gray-400'
+                      step.done
+                        ? 'bg-emerald-500 text-white'
+                        : isSelected
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-white/10 text-gray-400'
                     }`}>
-                      {idx + 1}
+                      {step.done ? '✓' : idx + 1}
                     </span>
                     <span>{step.title}</span>
+                    {step.recommended && (
+                      <span className="text-[9px] px-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">建议</span>
+                    )}
                   </button>
                 );
               })}
@@ -619,6 +699,26 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
 
             {/* In-App Dispatch */}
             <div className="flex items-center gap-2.5">
+              <span className={`text-[10px] px-2.5 py-1.5 rounded-xl border font-mono font-bold flex items-center gap-1.5 ${
+                systemMode === 'real'
+                  ? isSmtpConfigured
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+              }`}>
+                {systemMode === 'real' ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>🚀 真实模式</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span>🛡️ 沙盒安全模式</span>
+                  </>
+                )}
+              </span>
+
               <button
                 onClick={() => {
                   const contentToCopy = previewMode === 'html' ? renderedHtml : textContent;
@@ -635,10 +735,20 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
               <button
                 onClick={handleSendEmail}
                 disabled={isSending || !recipientEmail}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 transition-all transform active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                className={`px-5 py-2 rounded-xl font-bold text-xs shadow-lg transition-all transform active:scale-95 disabled:opacity-50 flex items-center gap-1.5 ${
+                  systemMode === 'real'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/30'
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-indigo-500/25'
+                }`}
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{isSending ? '发送中...' : `系统发送 Stage ${selectedSequenceIndex + 1}`}</span>
+                <span>
+                  {isSending 
+                    ? '发送中...' 
+                    : systemMode === 'real'
+                    ? `真实发送 Stage ${selectedSequenceIndex + 1}`
+                    : `沙盒模拟发送 Stage ${selectedSequenceIndex + 1}`}
+                </span>
               </button>
             </div>
           </div>

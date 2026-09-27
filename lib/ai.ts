@@ -27,7 +27,7 @@ function cleanAndParseJSON(text: string) {
 }
 
 export const aiService = {
-  async fetchWebsiteContent(url: string): Promise<{ text: string; hasViewport: boolean; loadTimeMs: number; isHttps: boolean }> {
+  async fetchWebsiteContent(url: string): Promise<{ text: string; hasViewport: boolean; loadTimeMs: number; isHttps: boolean; detectedEmail?: string | null }> {
     if (!url || !url.startsWith("http")) {
       url = `https://${url}`;
     }
@@ -56,19 +56,31 @@ export const aiService = {
       $('a[href^="mailto:"]').each((_, el) => {
         const href = $(el).attr('href');
         if (href) {
-          const email = href.replace('mailto:', '').split('?')[0].trim();
-          if (email && email.includes('@')) mailtos.push(email);
+          const email = href.replace('mailto:', '').split('?')[0].trim().toLowerCase();
+          if (email && email.includes('@') && !email.includes('example') && !email.includes('domain.com')) {
+            mailtos.push(email);
+          }
         }
       });
 
       $("script, style, noscript, svg").remove();
       const bodyText = $("body").text().replace(/\s+/g, ' ').trim();
       
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      const textMatches = (bodyText.match(emailRegex) || []).map(e => e.toLowerCase()).filter(e => 
+        !e.endsWith('.png') && !e.endsWith('.jpg') && !e.endsWith('.jpeg') && !e.endsWith('.webp') && 
+        !e.endsWith('.gif') && !e.endsWith('.svg') && !e.includes('sentry') && !e.includes('wixpress') && 
+        !e.includes('example.com') && !e.includes('domain.com') && !e.includes('webpack')
+      );
+      const allFoundEmails = Array.from(new Set([...mailtos, ...textMatches]));
+      const detectedEmail = allFoundEmails.length > 0 ? allFoundEmails[0] : null;
+
       return {
-        text: (mailtos.length > 0 ? `Detected Email: ${mailtos[0]}\n` : '') + bodyText.substring(0, 12000),
+        text: (detectedEmail ? `Detected Email: ${detectedEmail}\n` : '') + bodyText.substring(0, 12000),
         hasViewport,
         loadTimeMs,
-        isHttps
+        isHttps,
+        detectedEmail
       };
     } catch (error: any) {
       console.error(`Error fetching website ${url}:`, error.message);
@@ -76,14 +88,15 @@ export const aiService = {
         text: `Error fetching content: ${error.message}`,
         hasViewport: false,
         loadTimeMs: 10000,
-        isHttps
+        isHttps,
+        detectedEmail: null
       };
     }
   },
 
   async analyzeWebsite(
     companyName: string, 
-    websiteData: string | { text: string; hasViewport?: boolean; loadTimeMs?: number; isHttps?: boolean },
+    websiteData: string | { text: string; hasViewport?: boolean; loadTimeMs?: number; isHttps?: boolean; detectedEmail?: string | null },
     leadMeta?: { rating?: number; location?: string; website?: string; industry?: string }
   ) {
     const model = getGenerativeModel();
@@ -91,6 +104,9 @@ export const aiService = {
     const hasViewport = typeof websiteData === 'object' && websiteData.hasViewport !== undefined ? websiteData.hasViewport : true;
     const loadTimeMs: number = typeof websiteData === 'object' && websiteData.loadTimeMs !== undefined ? websiteData.loadTimeMs : 1500;
     const isHttps = typeof websiteData === 'object' && websiteData.isHttps !== undefined ? websiteData.isHttps : true;
+    const detectedEmail = typeof websiteData === 'object' && (websiteData as any).detectedEmail 
+      ? (websiteData as any).detectedEmail 
+      : (rawContent.match(/Detected Email:\s*([^\s]+)/)?.[1] || null);
 
     const hasNoWebsite = !leadMeta?.website || rawContent.startsWith("Error fetching content") || rawContent.length < 50;
 
@@ -112,7 +128,7 @@ export const aiService = {
           : `Website ${!hasViewport ? 'lacks mobile responsiveness viewport' : 'visual design is outdated'} and lacks modern interactive booking.`,
         mobile_friendly: !hasNoWebsite && (hasViewport ?? false),
         business_insight: `${companyName} has strong local market potential (${leadMeta?.rating || '4.8'}★ on Google) but requires modern digital infrastructure.`,
-        contact_email: null,
+        contact_email: detectedEmail || null,
         score,
         grade: score >= 85 ? "A" : score >= 70 ? "B" : "C",
         need_category,
@@ -141,7 +157,7 @@ export const aiService = {
     Google Rating: ${leadMeta?.rating || "Not provided"}
     Location: ${leadMeta?.location || "North America"}
     Industry: ${leadMeta?.industry || "Local Business"}
-    Technical Signals: { hasViewport: ${hasViewport}, loadTimeMs: ${loadTimeMs}, isHttps: ${isHttps}, hasNoWebsite: ${hasNoWebsite} }
+    Technical Signals: { hasViewport: ${hasViewport}, loadTimeMs: ${loadTimeMs}, isHttps: ${isHttps}, hasNoWebsite: ${hasNoWebsite}, detectedEmail: "${detectedEmail || ''}" }
 
     Audit Content / Context:
     ${hasNoWebsite ? "The business has NO accessible official website on Google Maps." : rawContent.substring(0, 10000)}
@@ -179,6 +195,9 @@ export const aiService = {
     try {
       const result = await model.generateContent(prompt);
       const parsed = cleanAndParseJSON(result.response.text());
+      if (!parsed.contact_email && detectedEmail) {
+        parsed.contact_email = detectedEmail;
+      }
       return parsed;
     } catch (error: any) {
       console.error("AI Analysis failed:", error);
@@ -190,7 +209,7 @@ export const aiService = {
           : "Layout is non-responsive and difficult to navigate on mobile devices.",
         mobile_friendly: false,
         business_insight: `${companyName} delivers quality local services but loses digital referrals to competitors with modern sites.`,
-        contact_email: null,
+        contact_email: detectedEmail || null,
         score: hasNoWebsite ? 95 : 85,
         grade: "A",
         need_category,
@@ -225,7 +244,7 @@ export const aiService = {
         description: 'First touchpoint. Warm congratulatory opening, gentle observation of web friction, offering a zero-obligation interactive Figma mockup.',
         recommendedDelayDays: 0,
         defaultSubject: `Quick idea regarding ${company}'s web presence`,
-        content: `Hi ${company} Team,\n\nI was looking through reputable local providers in ${location} and wanted to congratulate you on your impressive ${rating}★ customer rating.\n\n${analysisInfo?.personalized_hook || `While checking your online presence, I noticed your digital storefront could be significantly upgraded to capture more direct inquiries from mobile searchers.`}\n\nOur team took the liberty of creating a free 1-page modern interactive concept prototype specifically for ${company}.\n\nWould you be open to me sharing a 90-second video or private staging link with you? Zero strings attached.\n\nBest regards,\nAlex Chen\nSenior Web Strategist`
+        content: `Hi ${company} Team,\n\nI was looking through reputable local providers in ${location} and wanted to congratulate you on your impressive ${rating}★ customer rating.\n\n${analysisInfo?.personalized_hook || `While checking your online presence, I noticed your digital storefront could be significantly upgraded to capture more direct inquiries from mobile searchers.`}\n\nOur team took the liberty of creating a free 1-page modern interactive concept prototype specifically for ${company}.\n\nWould you be open to me sharing a 90-second video or private staging link with you? Zero strings attached.\n\nBest regards,\nJason Yu\nSenior Web Strategist | Nexora Digital\nDirect Hotline: +1 (380) 218-4573\nEmail: jyu@wisdomitc.com`
       },
       {
         stage: 'stage_2_case_study',
@@ -233,7 +252,7 @@ export const aiService = {
         description: 'Sent 3 days later. Provides social proof from a similar SMB who increased conversion by 2.4x after a mobile-first overhaul.',
         recommendedDelayDays: 3,
         defaultSubject: `Case study: How modernizing the mobile flow doubled inquiries for a ${leadInfo.industry || 'local service'} firm`,
-        content: `Hi ${company} Team,\n\nFollowing up on my previous note. We recently helped a similar business in your industry revamp their mobile booking architecture.\n\nBy simplifying the tap-to-call flow and featuring live verified Google reviews on the front page, their inbound client calls increased by 140% in 60 days.\n\nI still have the tailored concept mockup ready for ${company}. Would you like me to send the preview link over?\n\nWarmly,\nAlex Chen`
+        content: `Hi ${company} Team,\n\nFollowing up on my previous note. We recently helped a similar business in your industry revamp their mobile booking architecture.\n\nBy simplifying the tap-to-call flow and featuring live verified Google reviews on the front page, their inbound client calls increased by 140% in 60 days.\n\nI still have the tailored concept mockup ready for ${company}. Would you like me to send the preview link over?\n\nWarmly,\nJason Yu\nSenior Web Strategist | Nexora Digital\nDirect Hotline: +1 (380) 218-4573\nEmail: jyu@wisdomitc.com`
       },
       {
         stage: 'stage_3_soft_cta',
@@ -241,7 +260,7 @@ export const aiService = {
         description: 'Sent 6 days later. Eliminates skepticism with a risk-free proposal and quick 10-minute discovery call.',
         recommendedDelayDays: 6,
         defaultSubject: `Quick question about ${company}'s 2026 digital roadmap`,
-        content: `Hi ${company} Team,\n\nI realize how busy managing daily client operations can be.\n\nIf you are currently satisfied with your inbound lead volume, no problem at all. But if you have 10 minutes this Thursday, I'd love to walk you through the custom design prototype and share 3 easy ways you can optimize your Google search visibility.\n\nAre you available for a brief 10-minute chat this week?\n\nBest,\nAlex Chen`
+        content: `Hi ${company} Team,\n\nI realize how busy managing daily client operations can be.\n\nIf you are currently satisfied with your inbound lead volume, no problem at all. But if you have 10 minutes this Thursday, I'd love to walk you through the custom design prototype and share 3 easy ways you can optimize your Google search visibility.\n\nAre you available for a brief 10-minute chat this week?\n\nBest regards,\nJason Yu\nSenior Web Strategist | Nexora Digital\nDirect Hotline: +1 (380) 218-4573\nEmail: jyu@wisdomitc.com`
       },
       {
         stage: 'stage_4_breakup',
@@ -249,7 +268,7 @@ export const aiService = {
         description: 'Sent 10 days later. High-deliverability North American break-up email that respects their inbox while keeping the door wide open.',
         recommendedDelayDays: 10,
         defaultSubject: `Closing the loop regarding ${company}'s web design`,
-        content: `Hi ${company} Team,\n\nI haven't heard back, so I assume redesigning ${company}'s web presence isn't an active priority right now, and I completely respect that.\n\nI will close out your file and stop following up so I don't clutter your inbox. If you ever decide to modernize your website or need help dominating local search in ${location}, feel free to reach back out anytime.\n\nWishing you continued success!\n\nBest regards,\nAlex Chen\nSenior Web Strategist`
+        content: `Hi ${company} Team,\n\nI haven't heard back, so I assume redesigning ${company}'s web presence isn't an active priority right now, and I completely respect that.\n\nI will close out your file and stop following up so I don't clutter your inbox. If you ever decide to modernize your website or need help dominating local search in ${location}, feel free to reach back out anytime.\n\nWishing you continued success!\n\nBest regards,\nJason Yu\nSenior Web Strategist | Nexora Digital\nDirect Hotline: +1 (380) 218-4573\nEmail: jyu@wisdomitc.com`
       }
     ];
 

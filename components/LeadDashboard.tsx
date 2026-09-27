@@ -31,6 +31,7 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
     const [searchFilter, setSearchFilter] = useState('');
     const [gradeFilter, setGradeFilter] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [crmFilter, setCrmFilter] = useState<string>('ALL');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [activeDetailLead, setActiveDetailLead] = useState<Lead | null>(null);
     const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
@@ -47,12 +48,23 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
             // Grade filter
             const matchesGrade = gradeFilter === 'ALL' || lead.ai_grade === gradeFilter;
 
-            // Status filter
+            // AI Status filter
             const matchesStatus = statusFilter === 'ALL' || lead.ai_status === statusFilter;
 
-            return matchesSearch && matchesGrade && matchesStatus;
+            // CRM Outreach & Tracking Status filter
+            const matchesCrm = 
+                crmFilter === 'ALL' ? true :
+                crmFilter === 'contacted' ? (lead.status === 'greeting_sent' || lead.status === 'followup_sent' || lead.status === 'contacted' || (lead.contact_attempts || 0) > 0) :
+                crmFilter === 'uncontacted' ? (!lead.status || lead.status === 'discovered' || lead.status === 'analyzed' || lead.status === 'pending') && !(lead.contact_attempts && lead.contact_attempts > 0) :
+                crmFilter === 'greeting_sent' ? (lead.status === 'greeting_sent' || ((lead.contact_attempts || 0) === 1 && lead.status === 'contacted')) :
+                crmFilter === 'followup_sent' ? (lead.status === 'followup_sent' || ((lead.contact_attempts || 0) > 1 && lead.status === 'contacted')) :
+                crmFilter === 'replied' ? lead.status === 'replied' :
+                crmFilter === 'meeting_booked' ? lead.status === 'meeting_booked' :
+                crmFilter === 'closed_won' ? lead.status === 'closed_won' : true;
+
+            return matchesSearch && matchesGrade && matchesStatus && matchesCrm;
         });
-    }, [leads, searchFilter, gradeFilter, statusFilter]);
+    }, [leads, searchFilter, gradeFilter, statusFilter, crmFilter]);
 
     const toggleSelectId = (id: number) => {
         setSelectedIds((prev) => 
@@ -246,11 +258,27 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
                             onChange={(e) => setStatusFilter(e.target.value)}
                             className="px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-xs text-gray-300 outline-none focus:border-indigo-500/50 cursor-pointer"
                         >
-                            <option value="ALL">All AI Statuses</option>
-                            <option value="completed">Completed Audit</option>
-                            <option value="pending">Pending Audit</option>
-                            <option value="analyzing">Analyzing</option>
-                            <option value="failed">Audit Failed</option>
+                            <option value="ALL">全量体检状态 (All AI)</option>
+                            <option value="completed">诊断完成 (Completed)</option>
+                            <option value="pending">待诊断 (Pending)</option>
+                            <option value="analyzing">诊断中 (Analyzing)</option>
+                            <option value="failed">体检失败 (Failed)</option>
+                        </select>
+
+                        {/* CRM Outreach Status Filter */}
+                        <select
+                            value={crmFilter}
+                            onChange={(e) => setCrmFilter(e.target.value)}
+                            className="px-3 py-2 rounded-xl bg-black/60 border border-indigo-500/30 text-xs text-indigo-300 outline-none focus:border-indigo-500 cursor-pointer font-medium"
+                        >
+                            <option value="ALL">全部建联进度 (All CRM Stages)</option>
+                            <option value="contacted">✓ 已发信触达 (All Contacted)</option>
+                            <option value="uncontacted">待发信建联 (Uncontacted)</option>
+                            <option value="greeting_sent">已发 Stage 1 (Greeting)</option>
+                            <option value="followup_sent">已发 Stage 2 (Follow-up)</option>
+                            <option value="replied">🔥 客户已回复 (Replied)</option>
+                            <option value="meeting_booked">📅 已预约演示 (Booked)</option>
+                            <option value="closed_won">🏆 签约成交 (Won)</option>
                         </select>
                     </div>
 
@@ -259,12 +287,13 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
                         <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400">
                             Showing <strong className="text-white font-bold">{filteredLeads.length}</strong> / {leads.length}
                         </span>
-                        {(searchFilter || gradeFilter !== 'ALL' || statusFilter !== 'ALL') && (
+                        {(searchFilter || gradeFilter !== 'ALL' || statusFilter !== 'ALL' || crmFilter !== 'ALL') && (
                             <button
                                 onClick={() => {
                                     setSearchFilter('');
                                     setGradeFilter('ALL');
                                     setStatusFilter('ALL');
+                                    setCrmFilter('ALL');
                                 }}
                                 className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[11px] font-sans font-medium transition-all"
                             >

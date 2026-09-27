@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { mailer } from '@/lib/mailer';
+import { getSystemEnvMode } from '@/lib/system-env';
+import { generateExecutivePosterHtml, generateExecutivePosterPlainText } from '@/lib/email-poster';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,17 +35,76 @@ export async function POST(
       return NextResponse.json({ error: 'Lead has no contact email. Please enter one before dispatching.' }, { status: 400 });
     }
 
-    const emailSubject = payload.subject || `Web Presence Proposal for ${lead.name}`;
-    const emailBody = payload.content || lead.analysis?.generated_email || 'Hello...';
+    // Determine public or local origin domain for live proposal links
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
+    const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+    const originDomain = `${proto}://${host}`;
+    const proposalUrl = `${originDomain}/proposal/${lead.id}`;
+
+    const senderEmail = process.env.SMTP_USER || 'jyu@wisdomitc.com';
+    const senderName = process.env.SMTP_SENDER_NAME || 'Jason Yu | Nexora Senior Web Strategist';
+
+    const emailSubject = payload.subject || `2026 Web Architecture Blueprint for ${lead.name} [Confidential Audit]`;
+
+    // 1. Build the exquisite visual HTML poster
+    let emailPosterHtml = payload.html;
+    if (!emailPosterHtml) {
+      if (payload.content && (payload.content.includes('<html') || payload.content.includes('<table') || payload.content.includes('<body'))) {
+        emailPosterHtml = payload.content;
+      } else {
+        emailPosterHtml = generateExecutivePosterHtml(lead as any, {
+          originDomain,
+          proposalUrl,
+          senderName: 'Jason Yu',
+          senderRole: 'Senior Web Strategist & Tech Lead',
+          senderAgency: 'Nexora Digital Studio',
+          replyEmail: senderEmail,
+          senderPhone: '+1 (380) 218-4573',
+        });
+      }
+    }
+
+    // 2. Build or sanitize clean text fallback
+    let emailPlainText = payload.content && !payload.content.includes('<html')
+      ? payload.content
+      : generateExecutivePosterPlainText(lead as any, {
+          originDomain,
+          proposalUrl,
+          senderName: 'Jason Yu',
+          senderRole: 'Senior Web Strategist & Tech Lead',
+          senderAgency: 'Nexora Digital Studio',
+          replyEmail: senderEmail,
+          senderPhone: '+1 (380) 218-4573',
+        });
+
+    // Strictly enforce Jason Yu signature and agency identity
+    emailPlainText = emailPlainText
+      .replace(/Alex Chen/g, 'Jason Yu')
+      .replace(/Jordan Vance/g, 'Jason Yu')
+      .replace(/Elena Rostova/g, 'Jason Yu')
+      .replace(/Marcus Bell/g, 'Jason Yu')
+      .replace(/ApexWeb Studio/g, 'Nexora Digital')
+      .replace(/WebPulse Digital/g, 'Nexora Digital')
+      .replace(/NextEra Web Design/g, 'Nexora Digital')
+      .replace(/Prestige Digital/g, 'Nexora Digital');
+
     const stage = payload.stage || 'greeting_sent';
 
-    console.log(`=========================================`);
-    console.log(`[EDM DISPATCH ENGINE] Outbound Email Sent`);
-    console.log(`Target: ${targetEmail} (${lead.name})`);
-    console.log(`Stage: ${stage}`);
-    console.log(`Subject: ${emailSubject}`);
-    console.log(`Body Length: ${emailBody.length} chars`);
-    console.log(`=========================================`);
+    // Dispatch via mailer with both exquisite HTML Poster and plain text fallback
+    const mailResult = await mailer.sendEmail({
+      to: targetEmail,
+      subject: emailSubject,
+      text: emailPlainText,
+      html: emailPosterHtml,
+      fromName: senderName,
+    });
+
+    if (!mailResult.success && mailResult.mode === 'real_smtp') {
+      return NextResponse.json({
+        error: `腾讯企业邮 SMTP 发送失败: ${mailResult.error}`,
+        mode: 'real_smtp',
+      }, { status: 500 });
+    }
 
     // Determine updated lead status
     let newStatus = 'contacted';
@@ -60,9 +122,23 @@ export async function POST(
       },
     });
 
+    const systemMode = getSystemEnvMode();
+    let statusMessage = '';
+    if (mailResult.mode === 'real_smtp') {
+      statusMessage = `[真实外发成功] 邮件已通过腾讯企业邮投递至 ${targetEmail}`;
+    } else if (systemMode === 'sandbox') {
+      statusMessage = `[沙盒安全仿真] 当前处于沙盒环境，业务状态已推进，未向客户实际发信 (安全防误触)`;
+    } else {
+      statusMessage = `[沙盒安全仿真] 未配置 SMTP_PASS，业务状态已推进 (配置授权码后可真实投递)`;
+    }
+
     return NextResponse.json({ 
       status: 'success', 
-      message: `Email successfully dispatched to ${targetEmail}`,
+      dispatchMode: mailResult.mode,
+      messageId: mailResult.messageId,
+      from: `${senderName} <${senderEmail}>`,
+      to: targetEmail,
+      message: statusMessage,
       dispatchedStage: stage,
       timestamp: new Date().toISOString()
     });

@@ -19,6 +19,7 @@ import {
   Globe,
   Mail
 } from 'lucide-react';
+import EnvModeToggle from '@/components/EnvModeToggle';
 
 interface SettingsDashboardProps {
   onClearLeads: () => void;
@@ -234,6 +235,9 @@ export default function SettingsDashboard({ onClearLeads, onRefreshLeads }: Sett
           </div>
 
           <div className="space-y-4">
+            {/* Live vs Sandbox Environment Switcher */}
+            <EnvModeToggle variant="card" />
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { id: 'mock', title: '安全模拟演练 (Mock)', desc: '用于内部测试/演示，不向客户真实发信，记录完整日志' },
