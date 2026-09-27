@@ -35,6 +35,15 @@ export async function POST(
       return NextResponse.json({ error: 'Lead has no contact email. Please enter one before dispatching.' }, { status: 400 });
     }
 
+    // Check if customer is already flagged as a hard bounce / non-existent recipient
+    if (!payload.forceSend && (lead.status === 'bounced' || lead.email_status === 'bounced')) {
+      return NextResponse.json({
+        error: `该客户已被标记为【退信/死信客户】(原因: ${lead.bounce_reason || '邮箱不存在'})。为保护发信服务器信誉，系统已自动隔离。如需重新发送，请先更新为有效邮箱或勾选强制重发。`,
+        isBounced: true,
+        bounceReason: lead.bounce_reason,
+      }, { status: 400 });
+    }
+
     // Determine public or local origin domain for live proposal links
     const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
     const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
@@ -99,11 +108,42 @@ export async function POST(
       fromName: senderName,
     });
 
-    if (!mailResult.success && mailResult.mode === 'real_smtp') {
+    if (!mailResult.success) {
+      const errorMsg = mailResult.error || '发送失败';
+      const isBounce = errorMsg.includes('前置风控拦截') || 
+                       errorMsg.includes('550') || 
+                       errorMsg.includes('User unknown') || 
+                       errorMsg.includes('not found') || 
+                       errorMsg.includes('Recipient address rejected');
+
+      if (isBounce) {
+        let currentTags: string[] = [];
+        try {
+          currentTags = JSON.parse(lead.ai_tags || '[]');
+        } catch {
+          currentTags = [];
+        }
+        if (!currentTags.includes('BOUNCED_DEAD_EMAIL')) {
+          currentTags.push('BOUNCED_DEAD_EMAIL');
+        }
+
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: {
+            status: 'bounced',
+            email_status: errorMsg.includes('前置风控拦截') ? 'invalid_domain' : 'bounced',
+            bounce_reason: errorMsg,
+            bounced_at: new Date(),
+            ai_tags: JSON.stringify(currentTags),
+          },
+        });
+      }
+
       return NextResponse.json({
-        error: `腾讯企业邮 SMTP 发送失败: ${mailResult.error}`,
-        mode: 'real_smtp',
-      }, { status: 500 });
+        error: `邮件投递被拦截/失败: ${errorMsg}`,
+        mode: mailResult.mode,
+        isBounced: isBounce,
+      }, { status: 400 });
     }
 
     // Determine updated lead status
@@ -117,6 +157,7 @@ export async function POST(
       data: {
         contact_email: targetEmail,
         status: newStatus,
+        email_status: 'valid',
         contact_attempts: { increment: 1 },
         last_contacted: new Date(),
       },

@@ -83,7 +83,10 @@ export interface Lead {
     ai_grade?: string;
     ai_status: 'pending' | 'analyzing' | 'completed' | 'failed' | string;
     ai_tags: string[];
-    status: 'pending' | 'analyzed' | 'contacted' | 'greeting_sent' | 'followup_sent' | 'replied' | 'meeting_booked' | 'closed_won' | 'ignored' | string;
+    status: 'pending' | 'analyzed' | 'contacted' | 'greeting_sent' | 'followup_sent' | 'replied' | 'meeting_booked' | 'closed_won' | 'ignored' | 'bounced' | string;
+    email_status?: 'unknown' | 'valid' | 'invalid_syntax' | 'invalid_domain' | 'bounced' | string;
+    bounce_reason?: string;
+    bounced_at?: string;
     pipeline_stage?: PipelineStage;
     contact_attempts?: number;
     last_contacted?: string;

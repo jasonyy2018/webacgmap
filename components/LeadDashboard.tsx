@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import LeadCard from './LeadCard';
 import LeadDetailModal from './LeadDetailModal';
+import BounceManagementModal from './BounceManagementModal';
 import { 
   Loader2, 
   Users, 
@@ -15,7 +16,9 @@ import {
   FileSpreadsheet,
   FileCode,
   Mail,
-  X
+  X,
+  ShieldAlert,
+  AlertTriangle
 } from 'lucide-react';
 import type { Lead } from "@/lib/types";
 import { leadsApi } from '@/lib/api-client';
@@ -35,6 +38,11 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [activeDetailLead, setActiveDetailLead] = useState<Lead | null>(null);
     const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+    const [isBounceModalOpen, setIsBounceModalOpen] = useState(false);
+
+    const bouncedCount = useMemo(() => {
+        return leads.filter((l) => l.status === 'bounced' || l.email_status === 'bounced' || l.email_status === 'invalid_domain').length;
+    }, [leads]);
 
     // Filter leads based on controls
     const filteredLeads = useMemo(() => {
@@ -54,8 +62,9 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
             // CRM Outreach & Tracking Status filter
             const matchesCrm = 
                 crmFilter === 'ALL' ? true :
-                crmFilter === 'contacted' ? (lead.status === 'greeting_sent' || lead.status === 'followup_sent' || lead.status === 'contacted' || (lead.contact_attempts || 0) > 0) :
-                crmFilter === 'uncontacted' ? (!lead.status || lead.status === 'discovered' || lead.status === 'analyzed' || lead.status === 'pending') && !(lead.contact_attempts && lead.contact_attempts > 0) :
+                crmFilter === 'bounced' ? (lead.status === 'bounced' || lead.email_status === 'bounced' || lead.email_status === 'invalid_domain') :
+                crmFilter === 'contacted' ? (lead.status === 'greeting_sent' || lead.status === 'followup_sent' || lead.status === 'contacted' || (lead.contact_attempts || 0) > 0) && lead.status !== 'bounced' :
+                crmFilter === 'uncontacted' ? (!lead.status || lead.status === 'discovered' || lead.status === 'analyzed' || lead.status === 'pending') && !(lead.contact_attempts && lead.contact_attempts > 0) && lead.status !== 'bounced' :
                 crmFilter === 'greeting_sent' ? (lead.status === 'greeting_sent' || ((lead.contact_attempts || 0) === 1 && lead.status === 'contacted')) :
                 crmFilter === 'followup_sent' ? (lead.status === 'followup_sent' || ((lead.contact_attempts || 0) > 1 && lead.status === 'contacted')) :
                 crmFilter === 'replied' ? lead.status === 'replied' :
@@ -272,6 +281,7 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
                             className="px-3 py-2 rounded-xl bg-black/60 border border-indigo-500/30 text-xs text-indigo-300 outline-none focus:border-indigo-500 cursor-pointer font-medium"
                         >
                             <option value="ALL">全部建联进度 (All CRM Stages)</option>
+                            <option value="bounced">❌ 退信/死信客户 (Bounced / Invalid)</option>
                             <option value="contacted">✓ 已发信触达 (All Contacted)</option>
                             <option value="uncontacted">待发信建联 (Uncontacted)</option>
                             <option value="greeting_sent">已发 Stage 1 (Greeting)</option>
@@ -282,7 +292,7 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
                         </select>
                     </div>
 
-                    {/* Filter Statistics & Reset */}
+                    {/* Filter Statistics, Reset & Bounce Guard */}
                     <div className="flex items-center gap-2 text-xs font-mono shrink-0">
                         <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400">
                             Showing <strong className="text-white font-bold">{filteredLeads.length}</strong> / {leads.length}
@@ -295,11 +305,23 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
                                     setStatusFilter('ALL');
                                     setCrmFilter('ALL');
                                 }}
-                                className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[11px] font-sans font-medium transition-all"
+                                className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[11px] font-sans font-medium transition-all cursor-pointer"
                             >
                                 Reset Filter
                             </button>
                         )}
+                        <button
+                            onClick={() => setIsBounceModalOpen(true)}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500/20 to-indigo-500/20 hover:from-rose-500/30 hover:to-indigo-500/30 border border-rose-500/30 hover:border-rose-500/50 text-rose-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ml-1"
+                        >
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                            <span>送达率监控与退信清洗</span>
+                            {bouncedCount > 0 && (
+                                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white ml-0.5 animate-pulse">
+                                    {bouncedCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
 
@@ -388,6 +410,12 @@ const LeadDashboard: React.FC<LeadDashboardProps> = ({ leads, isLoading, onSelec
                     }}
                 />
             )}
+            {/* Bounce & Deliverability Management Modal */}
+            <BounceManagementModal
+                isOpen={isBounceModalOpen}
+                onClose={() => setIsBounceModalOpen(false)}
+                onUpdateLeads={onUpdate}
+            />
         </div>
     );
 };

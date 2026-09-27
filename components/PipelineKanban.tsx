@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { 
   Users, Mail, CheckCircle2, MessageSquare, Calendar, Trophy, 
   ArrowRight, Sparkles, ExternalLink, Globe, AlertCircle, Phone, MapPin,
-  Clock, FileText, Send 
+  Clock, FileText, Send, AlertTriangle 
 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { leadsApi } from '@/lib/api-client';
@@ -38,7 +38,7 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
       color: 'text-indigo-400',
       badgeBg: 'bg-indigo-500/10 text-indigo-400',
       borderColor: 'border-indigo-500/20',
-      matcher: (l) => l.ai_status === 'completed' && (!l.status || l.status === 'analyzed' || l.status === 'pending')
+      matcher: (l) => l.status !== 'bounced' && l.email_status !== 'bounced' && l.ai_status === 'completed' && (!l.status || l.status === 'analyzed' || l.status === 'pending')
     },
     {
       id: 'greeting_sent',
@@ -48,7 +48,7 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
       color: 'text-cyan-400',
       badgeBg: 'bg-cyan-500/10 text-cyan-400',
       borderColor: 'border-cyan-500/20',
-      matcher: (l) => l.status === 'greeting_sent' || (l.status === 'contacted' && (l.contact_attempts || 0) === 1)
+      matcher: (l) => l.status !== 'bounced' && l.email_status !== 'bounced' && (l.status === 'greeting_sent' || (l.status === 'contacted' && (l.contact_attempts || 0) === 1))
     },
     {
       id: 'followup_sent',
@@ -58,7 +58,7 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
       color: 'text-blue-400',
       badgeBg: 'bg-blue-500/10 text-blue-400',
       borderColor: 'border-blue-500/20',
-      matcher: (l) => l.status === 'followup_sent' || (l.status === 'contacted' && (l.contact_attempts || 0) > 1)
+      matcher: (l) => l.status !== 'bounced' && l.email_status !== 'bounced' && (l.status === 'followup_sent' || (l.status === 'contacted' && (l.contact_attempts || 0) > 1))
     },
     {
       id: 'replied',
@@ -89,6 +89,16 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
       badgeBg: 'bg-emerald-500/10 text-emerald-400',
       borderColor: 'border-emerald-500/20',
       matcher: (l) => l.status === 'closed_won'
+    },
+    {
+      id: 'bounced',
+      title: 'Bounced / Quarantined',
+      subtitle: '退信死信 / 邮箱不存在隔离',
+      icon: AlertTriangle,
+      color: 'text-rose-400',
+      badgeBg: 'bg-rose-500/10 text-rose-400',
+      borderColor: 'border-rose-500/20',
+      matcher: (l) => l.status === 'bounced' || l.email_status === 'bounced' || l.email_status === 'invalid_domain'
     }
   ];
 
@@ -216,6 +226,13 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
                           </div>
                         )}
 
+                        {(lead.status === 'bounced' || lead.email_status === 'bounced' || lead.email_status === 'invalid_domain') && (
+                          <div className="text-[9px] text-rose-300 bg-rose-500/15 border border-rose-500/30 rounded px-1.5 py-0.5 flex items-center gap-1 font-mono">
+                            <AlertTriangle className="w-2.5 h-2.5 text-rose-400 shrink-0" />
+                            <span className="truncate">{lead.bounce_reason || '退信/死信已隔离'}</span>
+                          </div>
+                        )}
+
                         {/* Contact attempts & Last Contacted time */}
                         {(((lead.contact_attempts ?? 0) > 0) || Boolean(lead.last_contacted)) && (
                           <div className="flex items-center justify-between text-[9px] text-gray-400 font-mono pt-0.5">
@@ -255,6 +272,7 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
                           <option value="replied">客户已回复 (Replied)</option>
                           <option value="meeting_booked">已预约演示 (Meeting)</option>
                           <option value="closed_won">签约成交 (Won)</option>
+                          <option value="bounced">❌ 退信死信 (Bounced)</option>
                           <option value="ignored">归档关闭 (Ignore)</option>
                         </select>
                       </div>

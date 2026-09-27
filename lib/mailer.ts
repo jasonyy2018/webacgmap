@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getSystemEnvMode } from './system-env';
+import { emailVerifier } from './email-verifier';
 
 export interface SendEmailOptions {
   to: string;
@@ -76,6 +77,19 @@ export const mailer = {
   async sendEmail(options: SendEmailOptions): Promise<MailerResult> {
     const config = this.getSmtpConfig();
     const fromAddress = `"${options.fromName || config.senderName}" <${config.user}>`;
+
+    // 0. Pre-flight verification (RFC Syntax & DNS MX lookup)
+    const verification = await emailVerifier.verifyEmail(options.to);
+    if (!verification.valid) {
+      console.warn(`⚠️ [PRE-FLIGHT BLOCKED]: Target ${options.to} failed check: ${verification.reason}`);
+      return {
+        success: false,
+        mode: this.isRealModeActive() ? 'real_smtp' : 'sandbox_simulation',
+        from: fromAddress,
+        to: options.to,
+        error: `[前置风控拦截] ${verification.reason}`,
+      };
+    }
 
     // 1. If Sandbox mode is active OR SMTP_PASS is not provided, run in Safe Sandbox Mode
     if (!this.isRealModeActive()) {

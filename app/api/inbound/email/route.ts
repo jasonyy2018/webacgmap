@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { aiService } from '@/lib/ai';
+import { emailVerifier } from '@/lib/email-verifier';
+import { ensureDatabaseReady } from '@/lib/db-init';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +41,7 @@ export async function GET() {
 // POST: Ingest email delivery to jyu@wisdomitc.com
 export async function POST(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     let payload: any = {};
     const contentType = req.headers.get('content-type') || '';
 
@@ -68,6 +71,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         error: 'Missing required email fields: from_email and content are required.'
       }, { status: 400 });
+    }
+
+    // 0. Detect if this is an automated NDR / Bounce notification (e.g. from mailer-daemon)
+    const isBounce = emailVerifier.isBounceNotification(from_email, subject, content);
+    if (isBounce) {
+      console.log(`🛡️ [INBOUND BOUNCE DETECTED]: Received NDR notification from ${from_email}, parsing...`);
+      const parsed = emailVerifier.parseBounceText(`${subject} \n ${content}`);
+      
+      const matchedLeads = await prisma.lead.findMany({
+        where: {
+          contact_email: { in: parsed.extractedEmails }
+        }
+      });
+
+      const updatedIds: number[] = [];
+      for (const lead of matchedLeads) {
+        let currentTags: string[] = [];
+        try {
+          currentTags = JSON.parse(lead.ai_tags || '[]');
+        } catch {
+          currentTags = [];
+        }
+        if (!currentTags.includes('BOUNCED_DEAD_EMAIL')) {
+          currentTags.push('BOUNCED_DEAD_EMAIL');
+        }
+
+        const reason = parsed.failureReasons[lead.contact_email?.toLowerCase() || ''] || '550 Recipient address rejected';
+
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            status: 'bounced',
+            email_status: 'bounced',
+            bounce_reason: reason,
+            bounced_at: new Date(),
+            ai_tags: JSON.stringify(currentTags),
+          }
+        });
+        updatedIds.push(lead.id);
+      }
+
+      return NextResponse.json({
+        success: true,
+        is_bounce: true,
+        message: `成功拦截入站退信通知，已识别并隔离 ${matchedLeads.length} 个失效商机客户`,
+        extracted_emails: parsed.extractedEmails,
+        bounced_leads: matchedLeads.map((l) => ({ id: l.id, name: l.name, email: l.contact_email }))
+      });
     }
 
     // 1. Locate existing lead or create a new lead record

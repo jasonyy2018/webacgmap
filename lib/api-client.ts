@@ -97,3 +97,59 @@ export const searchApi = {
     return [];
   },
 };
+
+export const bounceApi = {
+  getMetrics: async () => {
+    const res = await fetch('/api/leads/bounce');
+    if (!res.ok) throw new Error('Failed to fetch bounce metrics');
+    return res.json();
+  },
+  parseAndMark: async (rawText: string, emails?: string[]) => {
+    const res = await fetch('/api/leads/bounce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'parse_and_mark', raw_text: rawText, emails }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Failed to parse and mark bounce');
+    }
+    return res.json();
+  },
+  preflightVerifyAll: async (limit = 50) => {
+    const res = await fetch('/api/leads/bounce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'preflight_verify_all', limit }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Pre-flight scan failed');
+    }
+    return res.json();
+  },
+  restoreLead: async (leadId: number, newEmail: string) => {
+    const res = await fetch('/api/leads/bounce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_email_and_restore', lead_id: leadId, new_email: newEmail }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Failed to update email');
+    }
+    return res.json();
+  },
+  verifySingleEmail: async (email: string) => {
+    const res = await fetch('/api/leads/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Verification failed');
+    }
+    return res.json();
+  },
+};

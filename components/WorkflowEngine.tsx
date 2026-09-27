@@ -68,7 +68,7 @@ interface StageIssue {
   leadId?: number;
   leadName?: string;
   stage: WorkflowStageKey;
-  type: 'MISSING_EMAIL' | 'SITE_TIMEOUT' | 'INBOUND_UNRESOLVED' | 'NO_LEADS_FOUND' | 'GENERIC_ERROR';
+  type: 'MISSING_EMAIL' | 'SITE_TIMEOUT' | 'INBOUND_UNRESOLVED' | 'NO_LEADS_FOUND' | 'GENERIC_ERROR' | 'BOUNCED_EMAIL';
   description: string;
   timestamp: string;
   resolved: boolean;
@@ -438,13 +438,21 @@ export default function WorkflowEngine({ leads, onUpdateLeads, onNavigateTab, on
     addLog('outreach', 'info', `🚀 启动阶段 4: 针对痛点的个性化开发信自动化投递 ${modeTag}...`);
 
     const safeLeads = Array.isArray(targetLeads) ? targetLeads : (Array.isArray(leads) ? leads : []);
-    // Target uncontacted leads
-    const candidates = safeLeads.filter((l) => !l.status || l.status === 'discovered' || l.status === 'analyzed' || l.status === 'pending');
-    const toDispatch = candidates.length > 0 ? candidates : safeLeads.slice(0, 8);
+    // Target uncontacted leads, strictly excluding bounced or invalid emails
+    const candidates = safeLeads.filter((l) => 
+      (!l.status || l.status === 'discovered' || l.status === 'analyzed' || l.status === 'pending') &&
+      l.status !== 'bounced' &&
+      l.email_status !== 'bounced' &&
+      l.email_status !== 'invalid_domain'
+    );
+    const toDispatch = candidates.length > 0 
+      ? candidates 
+      : safeLeads.filter((l) => l.status !== 'bounced' && l.email_status !== 'bounced').slice(0, 8);
 
     setStageProgress({ current: 0, total: toDispatch.length });
     let sentCount = 0;
     let missingEmailCount = 0;
+    let bouncedCount = 0;
 
     for (let i = 0; i < toDispatch.length; i++) {
       const lead = toDispatch[i];
@@ -470,14 +478,36 @@ export default function WorkflowEngine({ leads, onUpdateLeads, onNavigateTab, on
         continue;
       }
 
-      addLog('outreach', 'info', `[${i + 1}/${toDispatch.length}] 发件人 jyu@wisdomitc.com ➔ 向 ${lead.contact_email} (${lead.name}) 发送 Stage 1 痛点改版信...`);
+      // Check if lead was marked as bounced
+      if (lead.status === 'bounced' || lead.email_status === 'bounced') {
+        bouncedCount++;
+        addLog('outreach', 'warn', `🛡️ [自动隔离] "${lead.name}" (${lead.contact_email}) 历史记录显示已退信/死信，已自动跳过！`);
+        continue;
+      }
+
+      addLog('outreach', 'info', `[${i + 1}/${toDispatch.length}] 前置风控核验中... 发件人 jyu@wisdomitc.com ➔ ${lead.contact_email} (${lead.name})`);
       try {
         await waitPacing(throttleMs);
         await leadsApi.sendEmail(lead.id);
         sentCount++;
         addLog('outreach', 'success', `✓ 成功投递开发信至 ${lead.contact_email} (发件人: jyu@wisdomitc.com)！`);
       } catch (err: any) {
-        addLog('outreach', 'error', `投递到 ${lead.contact_email} 失败: ${err.message}`);
+        bouncedCount++;
+        addLog('outreach', 'warn', `🛡️ [风控拦截/死信隔离] "${lead.name}" (${lead.contact_email}): ${err.message}`);
+        setIssues((prev) => [
+          ...prev,
+          {
+            id: `bounce-${lead.id}-${Date.now()}`,
+            leadId: lead.id,
+            leadName: lead.name,
+            stage: 'outreach',
+            type: 'BOUNCED_EMAIL',
+            description: `邮箱不存在或已被隔离: ${err.message}`,
+            timestamp: new Date().toLocaleTimeString(),
+            resolved: false,
+            resolutionHint: '该商机已自动标记为【退信/死信】并予以永久隔离，不会重复发信损害信誉。',
+          },
+        ]);
       }
     }
 

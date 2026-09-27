@@ -20,7 +20,10 @@ model Lead {
   search_query    String?       @map("search_query")
   search_location String?       @map("search_location")
   industry        String?
-  status          String        @default("pending") // pending, analyzed, contacted, greeting_sent, followup_sent, replied, meeting_booked, closed_won, ignored
+  status          String        @default("pending") // pending, analyzed, contacted, greeting_sent, followup_sent, replied, meeting_booked, closed_won, ignored, bounced
+  email_status    String?       @default("unknown") @map("email_status") // unknown, valid, invalid_syntax, invalid_domain, bounced
+  bounce_reason   String?       @map("bounce_reason")
+  bounced_at      DateTime?     @map("bounced_at")
   ai_score        Int?          @map("ai_score")
   ai_grade        String?       @map("ai_grade")
   ai_status       String        @default("pending") @map("ai_status") // pending, analyzing, completed, failed
