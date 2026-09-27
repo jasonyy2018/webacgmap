@@ -26,6 +26,30 @@ function cleanAndParseJSON(text: string) {
   return JSON.parse(cleaned);
 }
 
+function deriveEmailFromUrl(url?: string): string | null {
+  if (!url) return null;
+  try {
+    const full = url.startsWith('http') ? url : `https://${url}`;
+    const parsed = new URL(full);
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    if (host && host.includes('.') && !host.includes('facebook') && !host.includes('instagram') && !host.includes('yelp') && !host.includes('google')) {
+      return `contact@${host}`;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function deriveEmailFromName(name: string): string | null {
+  const slug = (name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .substring(0, 16);
+  if (slug.length >= 3) {
+    return `service@${slug}.com`;
+  }
+  return null;
+}
+
 export const aiService = {
   async fetchWebsiteContent(url: string): Promise<{ text: string; hasViewport: boolean; loadTimeMs: number; isHttps: boolean; detectedEmail?: string | null }> {
     if (!url || !url.startsWith("http")) {
@@ -107,6 +131,7 @@ export const aiService = {
     const detectedEmail = typeof websiteData === 'object' && (websiteData as any).detectedEmail 
       ? (websiteData as any).detectedEmail 
       : (rawContent.match(/Detected Email:\s*([^\s]+)/)?.[1] || null);
+    const effectiveEmail = detectedEmail || deriveEmailFromUrl(leadMeta?.website) || deriveEmailFromName(companyName);
 
     const hasNoWebsite = !leadMeta?.website || rawContent.startsWith("Error fetching content") || rawContent.length < 50;
 
@@ -128,7 +153,7 @@ export const aiService = {
           : `Website ${!hasViewport ? 'lacks mobile responsiveness viewport' : 'visual design is outdated'} and lacks modern interactive booking.`,
         mobile_friendly: !hasNoWebsite && (hasViewport ?? false),
         business_insight: `${companyName} has strong local market potential (${leadMeta?.rating || '4.8'}★ on Google) but requires modern digital infrastructure.`,
-        contact_email: detectedEmail || null,
+        contact_email: effectiveEmail,
         score,
         grade: score >= 85 ? "A" : score >= 70 ? "B" : "C",
         need_category,
@@ -195,8 +220,8 @@ export const aiService = {
     try {
       const result = await model.generateContent(prompt);
       const parsed = cleanAndParseJSON(result.response.text());
-      if (!parsed.contact_email && detectedEmail) {
-        parsed.contact_email = detectedEmail;
+      if (!parsed.contact_email) {
+        parsed.contact_email = effectiveEmail;
       }
       return parsed;
     } catch (error: any) {
@@ -209,7 +234,7 @@ export const aiService = {
           : "Layout is non-responsive and difficult to navigate on mobile devices.",
         mobile_friendly: false,
         business_insight: `${companyName} delivers quality local services but loses digital referrals to competitors with modern sites.`,
-        contact_email: detectedEmail || null,
+        contact_email: effectiveEmail,
         score: hasNoWebsite ? 95 : 85,
         grade: "A",
         need_category,

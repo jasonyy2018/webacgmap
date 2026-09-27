@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ensureDatabaseReady } from '@/lib/db-init';
 import type { Lead, LeadAnalysis } from '@prisma/client';
 
 type LeadWithAnalysis = Lead & { analysis: LeadAnalysis | null };
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await ensureDatabaseReady();
     const leads = await prisma.lead.findMany({
       orderBy: { created_at: 'desc' },
       include: { analysis: true },
@@ -36,9 +38,12 @@ export async function GET() {
     });
 
     return NextResponse.json(formattedLeads);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch leads:', error);
-    return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to fetch leads',
+      details: error?.message || String(error)
+    }, { status: 500 });
   }
 }
 

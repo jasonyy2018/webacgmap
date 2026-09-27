@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { mapsService } from '@/lib/maps';
+import { ensureDatabaseReady } from '@/lib/db-init';
 
 export const dynamic = 'force-dynamic';
 
 async function handleSearch(req: NextRequest) {
+  await ensureDatabaseReady();
   const { searchParams } = new URL(req.url);
   let query = searchParams.get('query');
   let location = searchParams.get('location');
@@ -44,6 +46,7 @@ async function handleSearch(req: NextRequest) {
               address: r.address,
               website: r.website,
               phone: r.phone,
+              contact_email: r.contact_email || null,
               rating: r.rating,
               place_id: r.place_id!,
               search_query: query,
@@ -74,6 +77,7 @@ async function handleSearch(req: NextRequest) {
           address: lead.address,
           website: lead.website || '',
           phone: lead.phone || '',
+          contact_email: lead.contact_email || r.contact_email || '',
           rating: lead.rating,
           place_id: lead.place_id,
           search_query: query,
