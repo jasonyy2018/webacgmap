@@ -15,7 +15,7 @@ import InboundInbox from '@/components/InboundInbox';
 import EmailEditorModal from '@/components/EmailEditorModal';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import SettingsDashboard from '@/components/SettingsDashboard';
-import WorkflowEngine from '@/components/WorkflowEngine';
+import WorkflowEngine, { WorkflowStatusInfo } from '@/components/WorkflowEngine';
 import EnvModeToggle from '@/components/EnvModeToggle';
 import type { Lead } from '@/lib/types';
 
@@ -24,6 +24,7 @@ export default function AdminPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatusInfo | null>(null);
   
   // API Developer Portal States
   const [originDomain, setOriginDomain] = useState('https://your-domain.com');
@@ -33,6 +34,19 @@ export default function AdminPage() {
   const [isTestingApi, setIsTestingApi] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<'curl' | 'python' | 'javascript'>('curl');
+
+  // Prevent accidental page refresh/navigation during workflow execution
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (workflowStatus?.isRunning) {
+        e.preventDefault();
+        e.returnValue = '一键商机全自动作业流正在进行中，离开页面将中断本次作业。确定离开吗？';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [workflowStatus?.isRunning]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -207,6 +221,12 @@ fetch(endpoint)
             >
               <item.icon className="w-4 h-4" />
               <span className="font-medium text-xs">{item.label}</span>
+              {item.id === 'workflow' && workflowStatus?.isRunning && (
+                <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>运行中</span>
+                </span>
+              )}
               {item.id === 'pipeline' && leads.length > 0 && (
                 <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white font-mono">
                   {leads.length}
@@ -242,6 +262,23 @@ fetch(endpoint)
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Live Workflow Status PIP Badge when running in background */}
+            {workflowStatus?.isRunning && activeTab !== 'workflow' && (
+              <button
+                onClick={() => setActiveTab('workflow')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 text-indigo-200 text-xs font-medium hover:bg-indigo-500/30 transition-all shadow-lg shadow-indigo-500/10 cursor-pointer animate-pulse"
+                title="点击快速返回自动化作业流控制台"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <span className="truncate max-w-[220px] sm:max-w-none">
+                  ⚡ 作业流进行中: <strong>{workflowStatus.stageTitle} ({workflowStatus.progress})</strong>
+                </span>
+                <span className="text-[10px] bg-indigo-500 text-white font-bold px-1.5 py-0.5 rounded shrink-0">
+                  查看 &rarr;
+                </span>
+              </button>
+            )}
+
             {/* Real vs Sandbox Environment Switcher */}
             <EnvModeToggle variant="header" />
 
@@ -261,15 +298,15 @@ fetch(endpoint)
 
         {/* Content Area with Permanent Visible Vertical Scrollbar */}
         <div className="flex-1 min-h-0 p-4 md:p-6 overflow-y-scroll custom-scrollbar">
-          {activeTab === 'workflow' && (
-            <div className="max-w-7xl mx-auto py-2">
-              <WorkflowEngine
-                leads={leads}
-                onUpdateLeads={fetchLeads}
-                onNavigateTab={(tab) => setActiveTab(tab)}
-              />
-            </div>
-          )}
+          {/* Keep WorkflowEngine continuously mounted so tab switching never aborts execution */}
+          <div className={activeTab === 'workflow' ? 'max-w-7xl mx-auto py-2' : 'hidden'}>
+            <WorkflowEngine
+              leads={leads}
+              onUpdateLeads={fetchLeads}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              onStatusChange={(status) => setWorkflowStatus(status)}
+            />
+          </div>
 
           {activeTab === 'search' && (
             <div className="space-y-8 max-w-6xl mx-auto py-4">

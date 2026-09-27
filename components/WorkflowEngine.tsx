@@ -37,10 +37,20 @@ import EnvModeToggle from '@/components/EnvModeToggle';
 import type { Lead } from '@/lib/types';
 import { leadsApi, searchApi } from '@/lib/api-client';
 
+export interface WorkflowStatusInfo {
+  isRunning: boolean;
+  isPaused: boolean;
+  activeStage: WorkflowStageKey | null;
+  stageTitle: string;
+  progress: string;
+  percent: number;
+}
+
 interface WorkflowEngineProps {
   leads: Lead[];
   onUpdateLeads: () => Promise<void> | void;
   onNavigateTab: (tabId: string) => void;
+  onStatusChange?: (status: WorkflowStatusInfo) => void;
 }
 
 export type WorkflowStageKey = 'discovery' | 'audit' | 'proposal' | 'outreach' | 'inbound';
@@ -88,7 +98,7 @@ const PRESET_TARGETS = [
   { id: 'miami_solar', query: 'Solar Panel Installation', location: 'Miami, FL', badge: '高预算 / 3D 原型促单高' },
 ];
 
-export default function WorkflowEngine({ leads, onUpdateLeads, onNavigateTab }: WorkflowEngineProps) {
+export default function WorkflowEngine({ leads, onUpdateLeads, onNavigateTab, onStatusChange }: WorkflowEngineProps) {
   // Mode: 'auto' (One-click full automation) or 'manual' (Step-by-step role execution)
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   
@@ -170,6 +180,27 @@ export default function WorkflowEngine({ leads, onUpdateLeads, onNavigateTab }: 
   useEffect(() => {
     isRunningRef.current = isRunning;
   }, [isRunning]);
+
+  // Broadcast workflow status to parent
+  useEffect(() => {
+    if (onStatusChange) {
+      const stageTitles: Record<WorkflowStageKey, string> = {
+        discovery: '阶段 1: 智能商机挖掘',
+        audit: '阶段 2: 官网深度诊断',
+        proposal: '阶段 3: 3D 原型生成',
+        outreach: '阶段 4: EDM 提案外发',
+        inbound: '阶段 5: 意向洞察跟进',
+      };
+      onStatusChange({
+        isRunning,
+        isPaused,
+        activeStage,
+        stageTitle: activeStage ? stageTitles[activeStage] : '自动化作业流',
+        progress: `${stageProgress.current}/${stageProgress.total || TARGET_VERIFIED_COUNT}`,
+        percent: stageProgress.total > 0 ? Math.round((stageProgress.current / stageProgress.total) * 100) : 0,
+      });
+    }
+  }, [isRunning, isPaused, activeStage, stageProgress.current, stageProgress.total, onStatusChange]);
 
   const addLog = (stage: WorkflowStageKey, level: 'info' | 'success' | 'warn' | 'error', message: string) => {
     const time = new Date().toLocaleTimeString();
