@@ -27,16 +27,7 @@ function deriveDomainEmail(website?: string, businessName?: string): string | nu
     }
   }
 
-  if (businessName) {
-    const slug = businessName
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .substring(0, 16);
-    if (slug.length >= 3) {
-      return `contact@${slug}.com`;
-    }
-  }
-
+  // Never fabricate imaginary domains from business names to avoid hard bounces
   return null;
 }
 
@@ -223,7 +214,7 @@ export const mapsService = {
         rating,
         website: `https://${domain}`,
         phone: phoneNum,
-        contact_email: `service@${domain}`,
+        contact_email: undefined,
       });
     }
 

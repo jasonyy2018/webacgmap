@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ensureDatabaseReady } from '@/lib/db-init';
 import { emailVerifier } from '@/lib/email-verifier';
+import { emailHunter } from '@/lib/email-hunter';
 
 export const dynamic = 'force-dynamic';
 
@@ -337,6 +338,101 @@ export async function POST(req: NextRequest) {
         status: 'success',
         message: `客户 "${lead.name}" 邮箱已成功更新为 ${newEmail}，MX 校验通过，已解除隔离恢复正常外发生命周期！`,
         lead: updated,
+      });
+    }
+
+    // -------------------------------------------------------------
+    // ACTION 4: Deep Hunt & Recover Valid Emails for All Leads
+    // -------------------------------------------------------------
+    if (action === 'deep_hunt_all') {
+      const candidates = await prisma.lead.findMany({
+        where: {
+          status: { notIn: ['contacted', 'greeting_sent', 'followup_sent', 'replied', 'meeting_booked', 'closed_won'] },
+          OR: [
+            { email_status: { not: 'valid' } },
+            { email_status: null },
+            { contact_email: null },
+          ]
+        },
+        take: body.limit || 30,
+      });
+
+      let scannedCount = 0;
+      let recoveredCount = 0;
+      let deadCount = 0;
+      const recoveredList: any[] = [];
+      const deadList: any[] = [];
+
+      for (const lead of candidates) {
+        scannedCount++;
+        const huntResult = await emailHunter.findValidEmailForLead(lead);
+
+        if (huntResult.found && huntResult.email) {
+          recoveredCount++;
+          let tags: string[] = [];
+          try {
+            tags = JSON.parse(lead.ai_tags || '[]');
+          } catch {
+            tags = [];
+          }
+          tags = tags.filter((t) => t !== 'BOUNCED_DEAD_EMAIL' && t !== 'NO_VALID_EMAIL' && t !== 'INVALID_DOMAIN_NO_MX');
+          tags.push('EMAIL_AUTO_DISCOVERED');
+
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: {
+              contact_email: huntResult.email,
+              email_status: 'valid',
+              status: lead.status === 'bounced' ? 'pending' : lead.status,
+              bounce_reason: null,
+              bounced_at: null,
+              ai_tags: JSON.stringify(tags),
+            }
+          });
+
+          recoveredList.push({
+            id: lead.id,
+            name: lead.name,
+            email: huntResult.email,
+            source: huntResult.source,
+          });
+        } else {
+          deadCount++;
+          let tags: string[] = [];
+          try {
+            tags = JSON.parse(lead.ai_tags || '[]');
+          } catch {
+            tags = [];
+          }
+          if (!tags.includes('NO_VALID_EMAIL')) tags.push('NO_VALID_EMAIL');
+
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: {
+              status: 'bounced',
+              email_status: 'no_valid_email',
+              bounce_reason: huntResult.reason || '深度嗅探：官网与全网未发现有效可用邮箱',
+              bounced_at: new Date(),
+              ai_tags: JSON.stringify(tags),
+            }
+          });
+
+          deadList.push({
+            id: lead.id,
+            name: lead.name,
+            reason: huntResult.reason,
+          });
+        }
+      }
+
+      return NextResponse.json({
+        status: 'success',
+        message: `全网深度邮箱嗅探完成：共检索 ${scannedCount} 个商机，成功发掘并校验通过真实邮箱 ${recoveredCount} 家，标记无效死信 ${deadCount} 家并已永久隔离！`,
+        scanned: scannedCount,
+        recovered: recoveredCount,
+        dead: deadCount,
+        recovered_leads: recoveredList,
+        dead_leads: deadList,
       });
     }
 

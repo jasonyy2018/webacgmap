@@ -33,6 +33,10 @@ export default function BounceManagementModal({
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<any>(null);
 
+  // Deep Hunter state
+  const [isHunting, setIsHunting] = useState(false);
+  const [huntResult, setHuntResult] = useState<any>(null);
+
   // Lead update inline state
   const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
   const [newEmailInput, setNewEmailInput] = useState('');
@@ -103,6 +107,24 @@ export default function BounceManagementModal({
       setErrorMsg(err.message || '前置体检失败');
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  // Handle deep email hunting across all unverified leads
+  const handleDeepHunt = async () => {
+    try {
+      setIsHunting(true);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      const res = await bounceApi.deepHuntAll(30);
+      setHuntResult(res);
+      setSuccessMsg(res.message);
+      await fetchMetrics();
+      onUpdateLeads();
+    } catch (err: any) {
+      setErrorMsg(err.message || '全网深度邮箱嗅探失败');
+    } finally {
+      setIsHunting(false);
     }
   };
 
@@ -377,6 +399,52 @@ export default function BounceManagementModal({
                             <span className="text-gray-400 ml-2 font-mono text-[11px]">({item.email})</span>
                           </div>
                           <span className="text-rose-400 text-[11px]">{item.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Deep Email Hunter Card */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
+                <div>
+                  <div className="text-sm font-semibold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span>智能深度邮箱嗅探与多源挖掘 (Deep Email Hunter)</span>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    对缺失或无效邮箱的客户，并发抓取其官网 /contact、/about 并探测 MX 邮箱，自动替换并激活真实客户
+                  </div>
+                </div>
+                <button
+                  onClick={handleDeepHunt}
+                  disabled={isHunting}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-purple-950/40 cursor-pointer shrink-0"
+                >
+                  {isHunting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  <span>{isHunting ? '正在全网多页面深度嗅探...' : '🔍 一键全网嗅探真实邮箱'}</span>
+                </button>
+              </div>
+
+              {huntResult && (
+                <div className="p-4 rounded-xl bg-black/40 border border-purple-500/20 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-purple-300">深度嗅探报告</span>
+                    <span className="text-gray-400">
+                      总扫描: {huntResult.scanned} | 成功挽回: <span className="text-emerald-400 font-bold">{huntResult.recovered}</span> | 确认为死信: <span className="text-rose-400 font-bold">{huntResult.dead}</span>
+                    </span>
+                  </div>
+                  {huntResult.recovered_leads?.length > 0 && (
+                    <div className="space-y-1.5 mt-2">
+                      <div className="text-[11px] font-semibold text-emerald-400">成功修复并激活的真实企业邮箱:</div>
+                      {huntResult.recovered_leads.map((item: any) => (
+                        <div key={item.id} className="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
+                          <div>
+                            <span className="font-semibold text-white">{item.name}</span>
+                            <span className="text-emerald-300 ml-2 font-mono text-[11px]">➔ {item.email}</span>
+                          </div>
+                          <span className="text-gray-400 text-[11px]">{item.source}</span>
                         </div>
                       ))}
                     </div>

@@ -458,31 +458,33 @@ export default function WorkflowEngine({ leads, onUpdateLeads, onNavigateTab, on
       const lead = toDispatch[i];
       setStageProgress({ current: i + 1, total: toDispatch.length });
 
-      if (!lead.contact_email) {
-        missingEmailCount++;
-        addLog('outreach', 'warn', `⚠️ "${lead.name}" 缺少公开邮箱，已挂起至待排查面板。`);
-        setIssues((prev) => [
-          ...prev,
-          {
-            id: `email-${lead.id}-${Date.now()}`,
-            leadId: lead.id,
-            leadName: lead.name,
-            stage: 'outreach',
-            type: 'MISSING_EMAIL',
-            description: `企业暂未公开邮箱 (电话: ${lead.phone || '无'})，无法自动推送 Stage 1 邮件`,
-            timestamp: new Date().toLocaleTimeString(),
-            resolved: false,
-            resolutionHint: '可点击右侧直接录入客户邮箱并重发，或点击转为电话销售外呼。',
-          },
-        ]);
+      // Check if lead was marked as bounced
+      if (lead.status === 'bounced' || lead.email_status === 'bounced' || lead.email_status === 'no_valid_email') {
+        bouncedCount++;
+        addLog('outreach', 'warn', `🛡️ [自动隔离] "${lead.name}" (${lead.contact_email || '无邮箱'}) 历史记录显示已退信/死信，已自动跳过！`);
         continue;
       }
 
-      // Check if lead was marked as bounced
-      if (lead.status === 'bounced' || lead.email_status === 'bounced') {
-        bouncedCount++;
-        addLog('outreach', 'warn', `🛡️ [自动隔离] "${lead.name}" (${lead.contact_email}) 历史记录显示已退信/死信，已自动跳过！`);
-        continue;
+      // Step 1: Active Email Hunter Probing & Verification before sending
+      if (!lead.contact_email || lead.email_status !== 'valid') {
+        addLog('outreach', 'info', `🔍 [前置有效性核验] "${lead.name}" 缺少已校验邮箱，正在启动官网多页面爬虫与全网智能嗅探...`);
+        try {
+          const huntRes = await leadsApi.findEmail(lead.id);
+          if (huntRes.success && huntRes.email) {
+            lead.contact_email = huntRes.email;
+            lead.email_status = 'valid';
+            addLog('outreach', 'success', `✓ [成功探查到真实邮箱] "${lead.name}" ➔ ${huntRes.email} (来源: ${huntRes.source || '官网深度抓取'})，MX 验证通过！`);
+          } else {
+            missingEmailCount++;
+            bouncedCount++;
+            addLog('outreach', 'warn', `🛡️ [标记并永久隔离] "${lead.name}" 全网未探测到可用邮箱，已标记为死信客户，不再重复触达！`);
+            continue;
+          }
+        } catch (huntErr: any) {
+          missingEmailCount++;
+          addLog('outreach', 'warn', `⚠️ "${lead.name}" 邮箱探查异常: ${huntErr.message}，已挂起。`);
+          continue;
+        }
       }
 
       addLog('outreach', 'info', `[${i + 1}/${toDispatch.length}] 前置风控核验中... 发件人 jyu@wisdomitc.com ➔ ${lead.contact_email} (${lead.name})`);

@@ -39,17 +39,6 @@ function deriveEmailFromUrl(url?: string): string | null {
   return null;
 }
 
-function deriveEmailFromName(name: string): string | null {
-  const slug = (name || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-    .substring(0, 16);
-  if (slug.length >= 3) {
-    return `service@${slug}.com`;
-  }
-  return null;
-}
-
 export const aiService = {
   async fetchWebsiteContent(url: string): Promise<{ text: string; hasViewport: boolean; loadTimeMs: number; isHttps: boolean; detectedEmail?: string | null }> {
     if (!url || !url.startsWith("http")) {
@@ -131,7 +120,7 @@ export const aiService = {
     const detectedEmail = typeof websiteData === 'object' && (websiteData as any).detectedEmail 
       ? (websiteData as any).detectedEmail 
       : (rawContent.match(/Detected Email:\s*([^\s]+)/)?.[1] || null);
-    const effectiveEmail = detectedEmail || deriveEmailFromUrl(leadMeta?.website) || deriveEmailFromName(companyName);
+    const effectiveEmail = detectedEmail || deriveEmailFromUrl(leadMeta?.website) || null;
 
     const hasNoWebsite = !leadMeta?.website || rawContent.startsWith("Error fetching content") || rawContent.length < 50;
 

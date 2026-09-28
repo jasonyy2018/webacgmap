@@ -83,6 +83,13 @@ export const leadsApi = {
     if (!response.ok) throw new Error('Failed to trigger analysis');
     return response.json();
   },
+
+  findEmail: async (id: number): Promise<{ success: boolean; email?: string; message?: string; reason?: string; source?: string; lead?: Lead }> => {
+    const response = await fetch(`/api/leads/${id}/find-email`, {
+      method: 'POST',
+    });
+    return response.json();
+  },
 };
 
 export const searchApi = {
@@ -149,6 +156,18 @@ export const bounceApi = {
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.message || 'Verification failed');
+    }
+    return res.json();
+  },
+  deepHuntAll: async (limit = 30) => {
+    const res = await fetch('/api/leads/bounce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deep_hunt_all', limit }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Deep hunt failed');
     }
     return res.json();
   },

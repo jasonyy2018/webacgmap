@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { mailer } from '@/lib/mailer';
 import { getSystemEnvMode } from '@/lib/system-env';
 import { generateExecutivePosterHtml, generateExecutivePosterPlainText } from '@/lib/email-poster';
+import { emailVerifier } from '@/lib/email-verifier';
+import { emailHunter } from '@/lib/email-hunter';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,18 +32,81 @@ export async function POST(
       // payload may be empty
     }
 
-    const targetEmail = payload.toEmail || lead.contact_email;
-    if (!targetEmail) {
-      return NextResponse.json({ error: 'Lead has no contact email. Please enter one before dispatching.' }, { status: 400 });
-    }
+    let targetEmail = payload.toEmail || lead.contact_email;
 
     // Check if customer is already flagged as a hard bounce / non-existent recipient
-    if (!payload.forceSend && (lead.status === 'bounced' || lead.email_status === 'bounced')) {
+    if (!payload.forceSend && (lead.status === 'bounced' || lead.email_status === 'bounced' || lead.email_status === 'no_valid_email')) {
       return NextResponse.json({
         error: `该客户已被标记为【退信/死信客户】(原因: ${lead.bounce_reason || '邮箱不存在'})。为保护发信服务器信誉，系统已自动隔离。如需重新发送，请先更新为有效邮箱或勾选强制重发。`,
         isBounced: true,
         bounceReason: lead.bounce_reason,
       }, { status: 400 });
+    }
+
+    // Step 0: Pre-flight Verification & Automated Email Hunter Recovery
+    let verification = targetEmail ? await emailVerifier.verifyEmail(targetEmail) : { valid: false, reason: '未登记有效邮箱' };
+
+    if (!verification.valid && !payload.forceSend) {
+      console.log(`🔍 [Email Pre-Check] Lead "${lead.name}" email (${targetEmail || 'none'}) is invalid (${verification.reason}). Hunting for alternatives...`);
+      const huntResult = await emailHunter.findValidEmailForLead(lead);
+
+      if (huntResult.found && huntResult.email) {
+        console.log(`✓ [Email Pre-Check] Found valid alternative email for "${lead.name}": ${huntResult.email} (Source: ${huntResult.source})`);
+        targetEmail = huntResult.email;
+
+        let tags: string[] = [];
+        try {
+          tags = JSON.parse(lead.ai_tags || '[]');
+        } catch {
+          tags = [];
+        }
+        tags = tags.filter((t) => t !== 'BOUNCED_DEAD_EMAIL' && t !== 'NO_VALID_EMAIL' && t !== 'INVALID_DOMAIN_NO_MX');
+        tags.push('EMAIL_AUTO_DISCOVERED');
+
+        // Update DB with verified alternative email
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: {
+            contact_email: targetEmail,
+            email_status: 'valid',
+            bounce_reason: null,
+            bounced_at: null,
+            ai_tags: JSON.stringify(tags),
+          },
+        });
+      } else {
+        // Mark as dead / bounced permanently so it is never retried
+        let tags: string[] = [];
+        try {
+          tags = JSON.parse(lead.ai_tags || '[]');
+        } catch {
+          tags = [];
+        }
+        if (!tags.includes('BOUNCED_DEAD_EMAIL')) tags.push('BOUNCED_DEAD_EMAIL');
+        if (!tags.includes('NO_VALID_EMAIL')) tags.push('NO_VALID_EMAIL');
+
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: {
+            status: 'bounced',
+            email_status: 'no_valid_email',
+            bounce_reason: huntResult.reason || verification.reason || '前置体检：全网未发现有效可用邮箱',
+            bounced_at: new Date(),
+            ai_tags: JSON.stringify(tags),
+          },
+        });
+
+        return NextResponse.json({
+          error: `前置风控拦截：原邮箱不可达 (${verification.reason})，且多页面全网深度嗅探未能找到有效可用邮箱。该客户已标记为死信并永久隔离，不再重复发送！`,
+          isBounced: true,
+          bounceReason: huntResult.reason || verification.reason,
+          testedCandidates: huntResult.testedCandidates,
+        }, { status: 400 });
+      }
+    }
+
+    if (!targetEmail) {
+      return NextResponse.json({ error: 'Lead has no contact email. Please enter one before dispatching.' }, { status: 400 });
     }
 
     // Determine public or local origin domain for live proposal links
