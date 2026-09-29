@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Inbox, MessageSquare, Sparkles, CheckCircle2, Clock, 
-  ExternalLink, Mail, ArrowRight, RefreshCw, Send, Check, 
+  ExternalLink, Mail, ArrowRight, ArrowLeft, RefreshCw, Send, Check, 
   Copy, Flame, Calendar, AlertTriangle, ShieldCheck, UserCheck,
   Globe, HelpCircle, Filter, Zap, Terminal, ChevronRight, Layers
 } from 'lucide-react';
@@ -21,6 +21,7 @@ export default function InboundInbox({ onRefreshLeads, onSelectLeadForOutreach }
   const [copiedDraft, setCopiedDraft] = useState(false);
   const [filterSentiment, setFilterSentiment] = useState<'ALL' | ReplySentiment>('ALL');
   const [filterSource, setFilterSource] = useState<'ALL' | 'web_contact' | 'direct_email' | 'website_inquiry'>('ALL');
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'detail'>('list');
 
   // Simulation test states
   const [showSimModal, setShowSimModal] = useState(false);
@@ -299,7 +300,9 @@ export default function InboundInbox({ onRefreshLeads, onSelectLeadForOutreach }
       {/* Main Split Layout */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 overflow-hidden">
         {/* Left List of Inbound Messages */}
-        <div className="w-full lg:w-80 xl:w-96 shrink-0 h-full flex flex-col bg-[#0a0e17] border border-white/10 rounded-2xl p-3 overflow-hidden shadow-xl">
+        <div className={`w-full lg:w-80 xl:w-96 shrink-0 h-full flex-col bg-[#0a0e17] border border-white/10 rounded-2xl p-3 overflow-hidden shadow-xl ${
+          mobileViewMode === 'detail' ? 'hidden lg:flex' : 'flex'
+        }`}>
           {/* Header & Source Filter Tabs */}
           <div className="shrink-0 space-y-2 border-b border-white/5 pb-2.5 mb-2">
             <div className="flex items-center justify-between">
@@ -378,6 +381,7 @@ export default function InboundInbox({ onRefreshLeads, onSelectLeadForOutreach }
                     type="button"
                     onClick={() => {
                       setSelectedReply(r);
+                      setMobileViewMode('detail');
                       if (!r.is_read) handleMarkAsRead(r.id);
                     }}
                     className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
@@ -417,7 +421,24 @@ export default function InboundInbox({ onRefreshLeads, onSelectLeadForOutreach }
 
         {/* Right Detail & AI Action Studio */}
         {selectedReply ? (
-          <div className="flex-1 h-full flex flex-col bg-[#0b0f19] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          <div className={`flex-1 h-full flex-col bg-[#0b0f19] border border-white/10 rounded-2xl overflow-hidden shadow-2xl ${
+            mobileViewMode === 'list' ? 'hidden lg:flex' : 'flex'
+          }`}>
+            {/* Mobile Back Button */}
+            <div className="lg:hidden px-4 pt-3 pb-1 border-b border-white/5 bg-black/40 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setMobileViewMode('list')}
+                className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>返回收信列表</span>
+              </button>
+              <span className="text-[11px] text-gray-400 truncate max-w-[180px]">
+                {selectedReply.lead?.name || selectedReply.from_name}
+              </span>
+            </div>
+
             {/* Header */}
             <div className="shrink-0 p-4 px-6 bg-gradient-to-r from-indigo-950/60 via-purple-950/30 to-black border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
               <div>

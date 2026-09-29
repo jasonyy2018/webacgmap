@@ -54,6 +54,7 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
   const [copiedProposalUrl, setCopiedProposalUrl] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'no_website' | 'mobile' | 'ready_to_send'>('all');
   const [showEmailDetector, setShowEmailDetector] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'editor' | 'leads'>('editor');
 
   // System Environment Mode (Real vs Sandbox)
   const [systemMode, setSystemMode] = useState<'sandbox' | 'real'>('sandbox');
@@ -262,79 +263,111 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
   };
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-4 overflow-hidden">
-      {/* Left Column: Leads Selection & Filters */}
-      <div className="w-full lg:w-72 xl:w-80 shrink-0 h-full flex flex-col bg-[#0a0e17] border border-white/10 rounded-2xl p-3 overflow-hidden shadow-xl">
-        {/* Quick Filter Tabs */}
-        <div className="shrink-0 flex p-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold mb-2.5">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'all' ? 'bg-indigo-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-          >
-            全部 ({analyzedLeads.length})
-          </button>
-          <button
-            onClick={() => setFilterType('no_website')}
-            className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'no_website' ? 'bg-rose-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-          >
-            无官网
-          </button>
-          <button
-            onClick={() => setFilterType('mobile')}
-            className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'mobile' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-          >
-            手机差
-          </button>
-        </div>
-
-        {/* Leads Scroll List */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-          {filteredLeads.length === 0 ? (
-            <div className="p-6 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-xl">
-              <Mail className="w-6 h-6 text-gray-600 mx-auto mb-1.5" />
-              <p className="text-[11px] text-gray-500">暂无匹配客户</p>
-            </div>
-          ) : (
-            filteredLeads.map((lead) => {
-              const isSelected = lead.id === activeLead?.id;
-              return (
-                <button
-                  key={lead.id}
-                  onClick={() => setSelectedLeadId(lead.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all ${
-                    isSelected
-                      ? 'bg-indigo-500/15 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30'
-                      : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-1.5 mb-1">
-                    <h4 className="text-xs font-bold text-white truncate flex-1">{lead.name}</h4>
-                    <span className="text-[10px] font-mono font-bold text-indigo-400 shrink-0">
-                      {lead.ai_score || 85}分
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
-                    <span className="truncate">{lead.search_location || 'North America'}</span>
-                    <span className="text-amber-400 font-bold shrink-0">⭐ {lead.rating || '4.8'}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-white/5">
-                    {getNeedBadge(lead.analysis?.need_category)}
-                    <span className={`text-[9px] font-mono ${lead.contact_email ? 'text-gray-400' : 'text-amber-500'}`}>
-                      {lead.contact_email ? '有邮箱' : '需填邮箱'}
-                    </span>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
+    <div className="h-full flex flex-col gap-3 overflow-hidden">
+      {/* Mobile Top View Switcher */}
+      <div className="lg:hidden flex items-center p-1 bg-black/60 border border-white/10 rounded-xl text-xs font-bold shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileTab('editor')}
+          className={`flex-1 py-1.5 rounded-lg transition-all text-center flex items-center justify-center gap-1.5 ${
+            mobileTab === 'editor' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Mail className="w-3.5 h-3.5" />
+          <span className="truncate">发信工作室 {activeLead ? `(${activeLead.name.slice(0, 8)}..)` : ''}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('leads')}
+          className={`flex-1 py-1.5 rounded-lg transition-all text-center flex items-center justify-center gap-1.5 ${
+            mobileTab === 'leads' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>选择客户 ({filteredLeads.length})</span>
+        </button>
       </div>
 
-      {/* Main EDM Studio Area */}
-      {activeLead ? (
-        <div className="flex-1 h-full flex flex-col bg-[#0b0f19] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 overflow-hidden">
+        {/* Left Column: Leads Selection & Filters */}
+        <div className={`w-full lg:w-72 xl:w-80 shrink-0 h-full flex-col bg-[#0a0e17] border border-white/10 rounded-2xl p-3 overflow-hidden shadow-xl ${
+          mobileTab === 'leads' ? 'flex' : 'hidden lg:flex'
+        }`}>
+          {/* Quick Filter Tabs */}
+          <div className="shrink-0 flex p-1 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold mb-2.5">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'all' ? 'bg-indigo-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            >
+              全部 ({analyzedLeads.length})
+            </button>
+            <button
+              onClick={() => setFilterType('no_website')}
+              className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'no_website' ? 'bg-rose-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            >
+              无官网
+            </button>
+            <button
+              onClick={() => setFilterType('mobile')}
+              className={`flex-1 py-1 rounded-lg transition-all ${filterType === 'mobile' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            >
+              手机差
+            </button>
+          </div>
+
+          {/* Leads Scroll List */}
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {filteredLeads.length === 0 ? (
+              <div className="p-6 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-xl">
+                <Mail className="w-6 h-6 text-gray-600 mx-auto mb-1.5" />
+                <p className="text-[11px] text-gray-500">暂无匹配客户</p>
+              </div>
+            ) : (
+              filteredLeads.map((lead) => {
+                const isSelected = lead.id === activeLead?.id;
+                return (
+                  <button
+                    key={lead.id}
+                    onClick={() => {
+                      setSelectedLeadId(lead.id);
+                      setMobileTab('editor');
+                    }}
+                    className={`w-full text-left p-3 rounded-xl border transition-all ${
+                      isSelected
+                        ? 'bg-indigo-500/15 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30'
+                        : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5 mb-1">
+                      <h4 className="text-xs font-bold text-white truncate flex-1">{lead.name}</h4>
+                      <span className="text-[10px] font-mono font-bold text-indigo-400 shrink-0">
+                        {lead.ai_score || 85}分
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
+                      <span className="truncate">{lead.search_location || 'North America'}</span>
+                      <span className="text-amber-400 font-bold shrink-0">⭐ {lead.rating || '4.8'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                      {getNeedBadge(lead.analysis?.need_category)}
+                      <span className={`text-[9px] font-mono ${lead.contact_email ? 'text-gray-400' : 'text-amber-500'}`}>
+                        {lead.contact_email ? '有邮箱' : '需填邮箱'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Main EDM Studio Area */}
+        {activeLead ? (
+          <div className={`flex-1 h-full flex-col bg-[#0b0f19] border border-white/10 rounded-2xl overflow-hidden shadow-2xl ${
+            mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'
+          }`}>
           {/* Top Compact Banner: Lead Diagnosis & Proposal Preview Shortcuts */}
           <div className="shrink-0 p-3.5 px-5 bg-gradient-to-r from-indigo-950/50 via-purple-950/30 to-black/70 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -762,6 +795,7 @@ export default function EDMOutreachHub({ leads, onUpdate, initialSelectedLead }:
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

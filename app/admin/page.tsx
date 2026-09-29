@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Layout, Search, Users, Settings, Mail, BarChart3, 
-  Code, Globe, Copy, Check, Terminal, Play, Layers, Sparkles, Inbox, ExternalLink, ArrowLeft, Zap 
+  Code, Globe, Copy, Check, Terminal, Play, Layers, Sparkles, Inbox, ExternalLink, ArrowLeft, Zap,
+  Menu, X
 } from 'lucide-react';
 import LeadSearch from '@/components/LeadSearch';
 import LeadDashboard from '@/components/LeadDashboard';
@@ -25,6 +26,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatusInfo | null>(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   
   // API Developer Portal States
   const [originDomain, setOriginDomain] = useState('https://your-domain.com');
@@ -180,8 +182,8 @@ fetch(endpoint)
 
   return (
     <div className="h-screen bg-[#050505] text-white flex font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-white/10 flex flex-col p-6 bg-black/40 backdrop-blur-xl shrink-0 h-full">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-64 border-r border-white/10 flex-col p-6 bg-black/40 backdrop-blur-xl shrink-0 h-full">
         <div className="flex items-center gap-3 mb-6 px-2">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <Layout className="w-5 h-5 text-white" />
@@ -242,38 +244,142 @@ fetch(endpoint)
         </div>
       </aside>
 
+      {/* Mobile Slide-over Drawer & Overlay */}
+      {isMobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-fadeIn">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm" 
+            onClick={() => setIsMobileNavOpen(false)} 
+          />
+          
+          {/* Drawer Body */}
+          <div className="relative w-72 max-w-[85vw] h-full bg-[#0b0f19] border-r border-white/10 p-5 flex flex-col z-10 shadow-2xl overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <Layout className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <span className="text-base font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300 tracking-tight block">
+                    MapKDev Admin
+                  </span>
+                  <span className="text-[9px] text-indigo-400 font-mono tracking-wider uppercase block">
+                    Mobile Console
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMobileNavOpen(false)}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                title="关闭菜单"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Back to Official Website */}
+            <Link 
+              href="/" 
+              onClick={() => setIsMobileNavOpen(false)}
+              className="mb-4 flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold"
+            >
+              <span className="flex items-center gap-2">
+                <Globe className="w-3.5 h-3.5" />
+                <span>访问业务展示官网</span>
+              </span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+
+            {/* Navigation links */}
+            <nav className="flex-1 space-y-1.5">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setIsMobileNavOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-left ${
+                    activeTab === item.id
+                      ? 'bg-indigo-600/25 text-indigo-300 border border-indigo-500/40 font-bold shadow-md'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span className="font-medium text-xs flex-1">{item.label}</span>
+                  {item.id === 'workflow' && workflowStatus?.isRunning && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-mono border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>运行中</span>
+                    </span>
+                  )}
+                  {item.id === 'pipeline' && leads.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white font-mono">
+                      {leads.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
+
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[10px]">
+                <p className="text-gray-400 font-bold mb-0.5">Active API Domain</p>
+                <p className="font-mono text-indigo-400 truncate">{originDomain}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative">
         {/* Header */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-black/20 backdrop-blur-md shrink-0 z-10">
-          <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-indigo-500/30">
+        <header className="h-14 sm:h-16 border-b border-white/5 flex items-center justify-between px-3 sm:px-8 bg-black/20 backdrop-blur-md shrink-0 z-10">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              onClick={() => setIsMobileNavOpen(true)}
+              className="md:hidden p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors shrink-0"
+              aria-label="打开功能菜单"
+              title="打开完整功能菜单"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
+            <span className="hidden sm:inline-block px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-indigo-500/30 shrink-0">
               Admin Ops
             </span>
-            <h1 className="text-xl font-bold capitalize tracking-tight flex items-center gap-2">
-              {activeTab === 'workflow' ? '一键商机全自动作业流 (One-Click Pipeline Orchestrator)' :
-               activeTab === 'api' ? 'API 开发者中心 & 接口部署' : 
-               activeTab === 'pipeline' ? 'North America Cold-to-Trust Pipeline' :
-               activeTab === 'inbox' ? 'Inbound Reply Inbox & AI Intelligence' :
-               activeTab === 'marketing' ? 'EDM Outreach Studio & Template Matrix' :
-               activeTab === 'analytics' ? 'Analytics Business Intelligence' :
-               activeTab === 'settings' ? 'System Settings & Control Center' :
+            <h1 className="text-sm sm:text-base md:text-xl font-bold capitalize tracking-tight truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none">
+              {activeTab === 'workflow' ? '全自动作业流 (Workflow)' :
+               activeTab === 'api' ? 'API 开发者中心' : 
+               activeTab === 'pipeline' ? '转化漏斗看板 (Pipeline)' :
+               activeTab === 'inbox' ? '意向收件箱 (Inbox)' :
+               activeTab === 'marketing' ? 'EDM 触达中心 (EDM Studio)' :
+               activeTab === 'analytics' ? '商业智能 (Analytics)' :
+               activeTab === 'settings' ? '系统设置 (Settings)' :
+               activeTab === 'search' ? '获客搜索预设' :
+               activeTab === 'leads' ? '商机管理与体检' :
                `${activeTab} Dashboard`}
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Live Workflow Status PIP Badge when running in background */}
             {workflowStatus?.isRunning && activeTab !== 'workflow' && (
               <button
                 onClick={() => setActiveTab('workflow')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 text-indigo-200 text-xs font-medium hover:bg-indigo-500/30 transition-all shadow-lg shadow-indigo-500/10 cursor-pointer animate-pulse"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 text-indigo-200 text-xs font-medium hover:bg-indigo-500/30 transition-all shadow-lg shadow-indigo-500/10 cursor-pointer animate-pulse"
                 title="点击快速返回自动化作业流控制台"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                <span className="truncate max-w-[220px] sm:max-w-none">
-                  ⚡ 作业流进行中: <strong>{workflowStatus.stageTitle} ({workflowStatus.progress})</strong>
+                <span className="hidden sm:inline truncate max-w-[180px]">
+                  ⚡ 作业流: <strong>{workflowStatus.progress}</strong>
                 </span>
-                <span className="text-[10px] bg-indigo-500 text-white font-bold px-1.5 py-0.5 rounded shrink-0">
+                <span className="sm:hidden text-[10px] font-bold text-emerald-400">
+                  ⚡ 运行中
+                </span>
+                <span className="hidden md:inline text-[10px] bg-indigo-500 text-white font-bold px-1.5 py-0.5 rounded shrink-0">
                   查看 &rarr;
                 </span>
               </button>
@@ -284,20 +390,20 @@ fetch(endpoint)
 
             <Link
               href="/"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 text-xs font-medium transition-all"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 text-xs font-medium transition-all"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-400" />
-              <span>查看前台官网</span>
+              <span>前台官网</span>
             </Link>
-            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+            <div className="hidden lg:flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>在线服务中</span>
             </div>
           </div>
         </header>
 
-        {/* Content Area with Permanent Visible Vertical Scrollbar */}
-        <div className="flex-1 min-h-0 p-4 md:p-6 overflow-y-scroll custom-scrollbar">
+        {/* Content Area with Mobile Safe Area Padding */}
+        <div className="flex-1 min-h-0 p-3 sm:p-4 md:p-6 pb-24 md:pb-6 overflow-y-scroll custom-scrollbar">
           {/* Keep WorkflowEngine continuously mounted so tab switching never aborts execution */}
           <div className={activeTab === 'workflow' ? 'max-w-7xl mx-auto py-2' : 'hidden'}>
             <WorkflowEngine
@@ -535,6 +641,70 @@ fetch(endpoint)
             onUpdate={fetchLeads}
           />
         )}
+
+        {/* Mobile Bottom Navigation Bar (Thumb ergonomic tab bar) */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c1222]/95 border-t border-white/10 backdrop-blur-xl px-1 py-1.5 flex justify-around items-center shadow-2xl">
+          <button
+            onClick={() => setActiveTab('workflow')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative ${
+              activeTab === 'workflow' ? 'text-indigo-400 font-bold bg-indigo-500/10' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <div className="relative">
+              <Zap className="w-4 h-4 mb-0.5" />
+              {workflowStatus?.isRunning && (
+                <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              )}
+            </div>
+            <span className="text-[10px]">作业流</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('leads')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative ${
+              activeTab === 'leads' ? 'text-indigo-400 font-bold bg-indigo-500/10' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <div className="relative">
+              <Users className="w-4 h-4 mb-0.5" />
+              {leads.length > 0 && (
+                <span className="absolute -top-1 -right-2 px-1 text-[8px] font-mono bg-indigo-500 text-white rounded-full leading-tight">
+                  {leads.length > 99 ? '99+' : leads.length}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px]">商机</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('pipeline')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+              activeTab === 'pipeline' ? 'text-indigo-400 font-bold bg-indigo-500/10' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Layers className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">看板</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('inbox')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+              activeTab === 'inbox' ? 'text-indigo-400 font-bold bg-indigo-500/10' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Inbox className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">收件箱</span>
+          </button>
+
+          <button
+            onClick={() => setIsMobileNavOpen(true)}
+            className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-gray-400 hover:text-gray-200 transition-all"
+            aria-label="更多功能"
+          >
+            <Menu className="w-4 h-4 mb-0.5" />
+            <span className="text-[10px]">更多</span>
+          </button>
+        </div>
       </main>
     </div>
   );

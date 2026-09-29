@@ -162,32 +162,32 @@ export default function BounceManagementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#0b0f19] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-[#0b0f19] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/[0.02]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500/20 to-indigo-500/20 border border-white/10 flex items-center justify-center text-rose-400">
-              <ShieldAlert className="w-5 h-5" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-white/[0.02]">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-rose-500/20 to-indigo-500/20 border border-white/10 flex items-center justify-center text-rose-400 shrink-0">
+              <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white tracking-wide">
-                  邮件送达率监控与退信死信清洗中心
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-wide truncate">
+                  邮件送达率监控与退信清洗中心
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
                   Bounce Guard
                 </span>
               </div>
-              <p className="text-xs text-gray-400">
-                实时把控发件人信誉，智能解析退信 NDR，自动隔离死信客户并提供前置 DNS MX 防护
+              <p className="text-[10px] sm:text-xs text-gray-400 truncate sm:whitespace-normal">
+                发件人信誉把控、退信 NDR 解析与前置 DNS MX 检验
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+            className="p-1.5 sm:p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors shrink-0 ml-2"
           >
             <X className="w-5 h-5" />
           </button>
@@ -195,63 +195,63 @@ export default function BounceManagementModal({
 
         {/* Global Notifications */}
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+          <div className="mx-4 sm:mx-6 mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-            <span>{errorMsg}</span>
+            <span className="truncate">{errorMsg}</span>
           </div>
         )}
         {successMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+          <div className="mx-4 sm:mx-6 mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span>{successMsg}</span>
+            <span className="truncate">{successMsg}</span>
           </div>
         )}
 
         {/* KPI Metrics Dashboard HUD */}
-        <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-5 gap-3 border-b border-white/10 bg-black/20">
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="text-[10px] uppercase font-bold text-gray-400">送达成功率</div>
-            <div className="text-2xl font-black text-emerald-400 mt-1">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 border-b border-white/10 bg-black/20 shrink-0">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-[9px] sm:text-[10px] uppercase font-bold text-gray-400">送达成功率</div>
+            <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-0.5 sm:mt-1">
               {metrics ? `${metrics.delivery_rate}%` : '--'}
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Delivery Rate</div>
+            <div className="text-[9px] text-gray-500 mt-0.5">Delivery Rate</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="text-[10px] uppercase font-bold text-gray-400">退信/死信率</div>
-            <div className={`text-2xl font-black mt-1 ${(metrics?.bounce_rate || 0) > 5 ? 'text-rose-400' : 'text-amber-400'}`}>
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-[9px] sm:text-[10px] uppercase font-bold text-gray-400">退信/死信率</div>
+            <div className={`text-xl sm:text-2xl font-black mt-0.5 sm:mt-1 ${(metrics?.bounce_rate || 0) > 5 ? 'text-rose-400' : 'text-amber-400'}`}>
               {metrics ? `${metrics.bounce_rate}%` : '--'}
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">目标 &lt; 2.0%</div>
+            <div className="text-[9px] text-gray-500 mt-0.5">目标 &lt; 2.0%</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="text-[10px] uppercase font-bold text-gray-400">总外发触达量</div>
-            <div className="text-xl font-bold text-cyan-400 mt-1">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-[9px] sm:text-[10px] uppercase font-bold text-gray-400">总外发触达量</div>
+            <div className="text-lg sm:text-xl font-bold text-cyan-400 mt-0.5 sm:mt-1">
               {metrics ? metrics.total_contacted : '--'}
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Total Outbound</div>
+            <div className="text-[9px] text-gray-500 mt-0.5">Total Outbound</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="text-[10px] uppercase font-bold text-gray-400">已成功送达</div>
-            <div className="text-xl font-bold text-emerald-400 mt-1">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-[9px] sm:text-[10px] uppercase font-bold text-gray-400">已成功送达</div>
+            <div className="text-lg sm:text-xl font-bold text-emerald-400 mt-0.5 sm:mt-1">
               {metrics ? metrics.delivered_count : '--'}
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Valid Inboxes</div>
+            <div className="text-[9px] text-gray-500 mt-0.5">Valid Inboxes</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="text-[10px] uppercase font-bold text-gray-400">已隔离死信</div>
-            <div className="text-xl font-bold text-rose-400 mt-1">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/5 col-span-2 sm:col-span-1">
+            <div className="text-[9px] sm:text-[10px] uppercase font-bold text-gray-400">已隔离死信</div>
+            <div className="text-lg sm:text-xl font-bold text-rose-400 mt-0.5 sm:mt-1">
               {metrics ? metrics.bounced_count : '--'}
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5">Quarantined</div>
+            <div className="text-[9px] text-gray-500 mt-0.5">Quarantined</div>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-white/10 px-6 gap-6 text-xs font-semibold">
+        <div className="flex border-b border-white/10 px-4 sm:px-6 gap-3 sm:gap-6 text-xs font-semibold overflow-x-auto custom-scrollbar shrink-0 whitespace-nowrap">
           <button
             onClick={() => setActiveTab('parser')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-colors ${

@@ -133,27 +133,27 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden">
       {/* Compact Top Value Banner */}
-      <div className="shrink-0 flex items-center justify-between p-3 px-5 rounded-2xl bg-white/[0.03] border border-white/10">
+      <div className="shrink-0 flex flex-wrap items-center justify-between p-3 px-4 sm:px-5 rounded-2xl bg-white/[0.03] border border-white/10 gap-2">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
             <Users className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white leading-tight">
+            <h3 className="text-xs sm:text-sm font-bold text-white leading-tight">
               North America Cold-to-Trust Pipeline
             </h3>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[10px] sm:text-[11px] text-gray-400">
               从 Google 陌生客户发掘，到建立信任、预约原型演示与签约的全链路漏斗
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs">
+          <div className="px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-xs">
             <span className="text-gray-400 mr-1.5">客户总数:</span>
             <span className="font-bold text-white font-mono">{leads.length}</span>
           </div>
-          <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
             <span className="text-emerald-400 mr-1.5">已签约:</span>
             <span className="font-bold text-emerald-400 font-mono">
               {leads.filter(l => l.status === 'closed_won').length}
@@ -163,7 +163,7 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
       </div>
 
       {/* Kanban Board Horizontal Scroll Container */}
-      <div className="flex-1 min-h-0 flex gap-3.5 overflow-x-auto overflow-y-hidden pb-1 custom-scrollbar">
+      <div className="flex-1 min-h-0 flex gap-3.5 overflow-x-auto overflow-y-hidden pb-1 custom-scrollbar snap-x snap-mandatory">
         {columns.map((col) => {
           const colLeads = leads.filter(col.matcher);
           const ColIcon = col.icon;
@@ -171,7 +171,7 @@ export default function PipelineKanban({ leads, onSelectLead, onUpdate }: Pipeli
           return (
             <div 
               key={col.id} 
-              className="w-72 shrink-0 h-full flex flex-col bg-[#0b0f19]/90 border border-white/10 rounded-2xl p-3 overflow-hidden shadow-lg"
+              className="w-[82vw] sm:w-72 shrink-0 h-full flex flex-col bg-[#0b0f19]/90 border border-white/10 rounded-2xl p-3 overflow-hidden shadow-lg snap-center"
             >
               {/* Column Header */}
               <div className="shrink-0 flex items-center justify-between border-b border-white/5 pb-2.5 mb-2.5">
